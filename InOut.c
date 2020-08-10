@@ -14,3 +14,8 @@ char* get_settings()
     return buff;
 }
 
+void log_move(char *filename, char *move)
+{
+    puts(move);
+    // TODO
+}

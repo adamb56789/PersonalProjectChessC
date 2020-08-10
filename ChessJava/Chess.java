@@ -725,20 +725,14 @@ public class Chess {
         player=1-player;//either 1 or 0
         for (int i=0;i<list.length();i+=8) {
             
-//            System.out.println("P"+player+".N"+aBCounter+" preM  "+Arrays.deepToString(board));
-//            System.out.println("P"+player+".N"+aBCounter+" move  "+list.substring(i,i+8));
             move(list.substring(i,i+8));
-//            System.out.println("P"+player+".N"+aBCounter+" postM "+Arrays.deepToString(board));
             
             doTheSwap();
             String returnString=alphaBeta(depth-1, beta, alpha, list.substring(i,i+8), player);
             int value=Integer.valueOf(returnString.substring(8));
             doTheSwap();
             
-//            System.out.println("P"+player+".N"+aBCounter+" preU  "+Arrays.deepToString(board));
-//            System.out.println("P"+player+".N"+aBCounter+" undo  "+list.substring(i,i+8));
             undo(list.substring(i,i+8));
-//            System.out.println("P"+player+".N"+aBCounter+" postU "+Arrays.deepToString(board));
             
             if (player==0) {
                 if (value<=beta) {

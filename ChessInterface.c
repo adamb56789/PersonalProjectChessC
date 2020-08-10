@@ -73,16 +73,39 @@ char* get_user_move(char board[8][8], state_t state)
             puts("Invalid input, should look like e2e4 or e2 e4");
         }
     } while (!valid);
-    
-    
+
+
     // calculate locations in 0-63 form
-    int old_location;
-    int new_location;
+    int old_location, new_location;
     old_location = (8 - (input[1] - 48)) * 8 + (input[0] - 97);
     new_location = (8 - (input[3 + has_space] - 48)) * 8 + (input[2 + has_space] - 97);
 
-    // format looks like (P5236)
-    char *move = malloc(8 * sizeof(char));
-    snprintf(move, 8, "(%c%d%d)", *(*board + old_location), old_location, new_location);
+    int moving_piece, captured_piece;
+    moving_piece = *(*board + old_location);
+    captured_piece = *(*board + new_location);
+
+    // Format looks like (P5236 )
+    // If castling, the moving piece is C or c
+    // If promotion, the mobing piece is ^
+    char *move = malloc(10 * sizeof(char));
+    snprintf(move, 10, "(%c%02d%02d%c)", moving_piece, old_location, new_location, captured_piece);
+
+    if (moving_piece == 'K' && old_location == 60) // Castling
+    {
+        if (new_location == 62) // Kingside
+        {
+            move="(C6062 )";
+        }
+        else if (new_location== 58) // Queenside
+        {
+            move="(c6058 )";
+        }
+    }
+    else if (moving_piece == 'P' && new_location < 8) // Promotion
+    {
+        move[1] = '^';
+    }
+    
+    
     return move;
 }

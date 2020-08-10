@@ -35,8 +35,8 @@ int main()
     time_str[13] = ';';
     time_str[16] = ';';
     time_str[24] = '\0'; // This character is \n for some reason
-    char filename[50];
-    snprintf(filename, 50, "Logs/%s.txt", time_str);
+    char log_filename[50];
+    snprintf(log_filename, 50, "Logs/%s.txt", time_str);
     // TODO turn this back on
     // fclose(fopen(filename, "w"));
 
@@ -55,6 +55,7 @@ int main()
         exit(EXIT_FAILURE);
     }
 
-    puts(get_user_move(board, state));
+    char *move = get_user_move(board, state);
+    log_move(log_filename, move);
     return 0;
 }

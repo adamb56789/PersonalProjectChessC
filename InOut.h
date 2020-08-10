@@ -3,3 +3,4 @@
 
 char* get_settings();
 
+void log_move(char *filename, char *move);
