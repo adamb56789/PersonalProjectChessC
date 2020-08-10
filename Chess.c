@@ -9,35 +9,29 @@ const char *EASY = "Easy";
 state_t state ={ true, true, true, true, true, false };
 
 char board[8][8] ={
-    'r', 'n', 'b', 'q', 'k', 'b', 'n', 'r', //0-7
-    'p', 'p', 'p', 'p', 'p', 'p', 'p', 'p', //8-15
-    ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', //16-23
-    ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', //24-31
-    ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', //32-39
-    ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', //40-47
-    'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P', //48-55
+    'r', 'n', 'b', 'q', 'k', 'b', 'n', 'r',  //0-7
+    'p', 'p', 'p', 'p', 'p', 'p', 'p', 'p',  //8-15
+    ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  //16-23
+    ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  //24-31
+    ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  //32-39
+    ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  //40-47
+    'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P',  //48-55
     'R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R' };//56-63
 
-void move_piece(char* m)
+void move_piece(move_t m)
 {
-    char old_location_str[3];
-    char new_location_str[3];
-    sprintf(old_location_str, "%.*s", 2, m + 2);
-    sprintf(new_location_str, "%.*s", 2, m + 4);
-    int old_location = atoi(old_location_str);
-    int new_location = atoi(new_location_str);
-
-    *(*board + old_location) = ' ';
+    *(*board + m.from) = ' ';
 
     // Promote pawn if ^
-    if (m[1] == '^') {
-        *(*board + new_location) = 'Q';
-    }
-    else if (toupper(m[1]) == 'C') // Castling
+    if (m.piece == '^')
     {
-        if (old_location == 60) // Player castling
+        *(*board + m.to) = 'Q';
+    }
+    else if (toupper(m.piece) == 'C') // Castling
+    {
+        if (m.from == 60) // Player castling
         {
-            if (m[1] == 'C') // Kingside
+            if (m.piece == 'C') // Kingside
             {
                 board[7][7] = ' ';
                 board[7][6] = 'K';
@@ -52,7 +46,7 @@ void move_piece(char* m)
         }
         else // Computer castling
         {
-            if (m[1] == 'C') // Kingside
+            if (m.piece == 'C') // Kingside
             {
                 board[7][0] = ' ';
                 board[7][1] = 'K';
@@ -68,7 +62,7 @@ void move_piece(char* m)
     }
     else
     {
-        *(*board + new_location) = m[1];
+        *(*board + m.to) = m.piece;
     }
 }
 
@@ -111,7 +105,7 @@ int main()
 
     while (true)
     {
-        char *move = get_user_move(board, state);
+        move_t move = get_user_move(board, state);
         log_move(log_filename, move);
         move_piece(move);
     }

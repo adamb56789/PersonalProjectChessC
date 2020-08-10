@@ -1,4 +1,5 @@
 #include "InOut.h"
+#include "data_types.h"
 
 char* get_settings()
 {
@@ -14,8 +15,8 @@ char* get_settings()
     return buff;
 }
 
-void log_move(char *filename, char *move)
+void log_move(char *filename, move_t move)
 {
-    puts(move);
+    printf("%c %02d %02d %d", move.piece, move.from, move.to, move.target);
     // TODO
 }

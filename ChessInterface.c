@@ -25,7 +25,7 @@ char* to_chess_symbol(char c)
     }
 }
 
-char* get_user_move(char board[8][8], state_t state)
+move_t get_user_move(char board[8][8], state_t state)
 {
     const char *LETTERLINE = "    a   b   c   d   e   f   g   h";
     const char *TOPLINE = "  \u250C\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u2510";
@@ -62,6 +62,12 @@ char* get_user_move(char board[8][8], state_t state)
         printf("Enter move: ");
         fgets(input, sizeof(input), stdin);
 
+        if (strcmp(input, "exit\n") == 0)
+        {
+            exit(EXIT_SUCCESS);
+        }
+        
+
         // check format, accept both "e2e4" and "e2 e4"
         has_space = input[2] == ' ';
         valid = 'a' <= input[0] && input[0] <= 'h';
@@ -70,42 +76,35 @@ char* get_user_move(char board[8][8], state_t state)
         valid &= '1' <= input[3 + has_space] && input[3 + has_space] <= '8';
         if (!valid)
         {
-            puts("Invalid input, should look like e2e4 or e2 e4");
+            puts("Invalid input, should look like e2e4 or e2 e4. Type exit to exit.");
         }
     } while (!valid);
 
-
+    move_t move;
     // calculate locations in 0-63 form
-    int old_location, new_location;
-    old_location = (8 - (input[1] - 48)) * 8 + (input[0] - 97);
-    new_location = (8 - (input[3 + has_space] - 48)) * 8 + (input[2 + has_space] - 97);
+    move.from = (8 - (input[1] - 48)) * 8 + (input[0] - 97);
+    move.to = (8 - (input[3 + has_space] - 48)) * 8 + (input[2 + has_space] - 97);
+    move.piece = *(*board + move.from);
+    move.target = *(*board + move.to);
 
-    int moving_piece, captured_piece;
-    moving_piece = *(*board + old_location);
-    captured_piece = *(*board + new_location);
-
-    // Format looks like (P5236 )
     // If castling, the moving piece is C for kingside or c for queenside
     // If promotion, the mobing piece is ^
-    char *move = malloc(10 * sizeof(char));
-    snprintf(move, 10, "(%c%02d%02d%c)", moving_piece, old_location, new_location, captured_piece);
 
-    if (moving_piece == 'K' && old_location == 60) // Castling
+    if (move.piece == 'K' && move.from == 60) // Castling
     {
-        if (new_location == 62) // Kingside
+        if (move.to == 62) // Kingside
         {
-            move="(C6062 )";
+            move.piece = 'C';
         }
-        else if (new_location== 58) // Queenside
+        else if (move.to == 58) // Queenside
         {
-            move="(c6058 )";
+            move.piece = 'c';
         }
     }
-    else if (moving_piece == 'P' && new_location < 8) // Promotion
+    else if (move.piece == 'P' && move.to < 8) // Promotion
     {
-        move[1] = '^';
+        move.piece = '^';
     }
-    
     
     return move;
 }
