@@ -13,3 +13,4 @@ char* get_settings()
     fclose(fp);
     return buff;
 }
+
