@@ -2,4 +2,4 @@
 #include <stdbool.h>
 #include <string.h>
 #include <time.h>
-
+#include <ctype.h>

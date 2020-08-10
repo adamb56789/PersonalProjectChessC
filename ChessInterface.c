@@ -85,7 +85,7 @@ char* get_user_move(char board[8][8], state_t state)
     captured_piece = *(*board + new_location);
 
     // Format looks like (P5236 )
-    // If castling, the moving piece is C or c
+    // If castling, the moving piece is C for kingside or c for queenside
     // If promotion, the mobing piece is ^
     char *move = malloc(10 * sizeof(char));
     snprintf(move, 10, "(%c%02d%02d%c)", moving_piece, old_location, new_location, captured_piece);
