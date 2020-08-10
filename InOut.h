@@ -5,4 +5,4 @@
 
 char* get_settings();
 
-void log_move(char *filename, move_t move);
+void log_move(move_t move);

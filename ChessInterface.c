@@ -25,6 +25,36 @@ char* to_chess_symbol(char c)
     }
 }
 
+move_t get_move_from_location(char board[8][8], int from_y, int from_x, int to_y, int to_x)
+{
+    move_t move;
+    // calculate locations in 0-63 form
+    move.from = from_y * 8 + from_x;
+    move.to = to_y * 8 + to_x;
+    move.piece = *(*board + move.from);
+    move.target = *(*board + move.to);
+
+    // If castling, the moving piece is C for kingside or c for queenside
+    // If promotion, the mobing piece is ^
+
+    if (move.piece == 'K' && move.from == 60) // Castling
+    {
+        if (move.to == 62) // Kingside
+        {
+            move.piece = 'C';
+        }
+        else if (move.to == 58) // Queenside
+        {
+            move.piece = 'c';
+        }
+    }
+    else if (move.piece == 'P' && move.to < 8) // Promotion
+    {
+        move.piece = '^';
+    }
+    return move;
+}
+
 move_t get_user_move(char board[8][8], state_t state)
 {
     const char *LETTERLINE = "    a   b   c   d   e   f   g   h";
@@ -80,31 +110,9 @@ move_t get_user_move(char board[8][8], state_t state)
         }
     } while (!valid);
 
-    move_t move;
-    // calculate locations in 0-63 form
-    move.from = (8 - (input[1] - 48)) * 8 + (input[0] - 97);
-    move.to = (8 - (input[3 + has_space] - 48)) * 8 + (input[2 + has_space] - 97);
-    move.piece = *(*board + move.from);
-    move.target = *(*board + move.to);
-
-    // If castling, the moving piece is C for kingside or c for queenside
-    // If promotion, the mobing piece is ^
-
-    if (move.piece == 'K' && move.from == 60) // Castling
-    {
-        if (move.to == 62) // Kingside
-        {
-            move.piece = 'C';
-        }
-        else if (move.to == 58) // Queenside
-        {
-            move.piece = 'c';
-        }
-    }
-    else if (move.piece == 'P' && move.to < 8) // Promotion
-    {
-        move.piece = '^';
-    }
-    
-    return move;
+    int from_y = 8 - (input[1] - 48);
+    int from_x = input[0] - 97;
+    int to_y = 8 - (input[3 + has_space] - 48);
+    int to_x = input[2 + has_space] - 97;
+    return get_move_from_location(board, from_y, from_x, to_y, to_x);
 }

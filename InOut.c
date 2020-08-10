@@ -15,8 +15,8 @@ char* get_settings()
     return buff;
 }
 
-void log_move(char *filename, move_t move)
+void log_move(move_t move)
 {
-    printf("%c %02d %02d %d", move.piece, move.from, move.to, move.target);
+    printf("%c %02d %02d %c\n", move.piece, move.from, move.to, move.target);
     // TODO
 }
