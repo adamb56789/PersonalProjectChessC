@@ -20,16 +20,16 @@ char board[8][8] ={
 
 void move_piece(move_t m)
 {
-    *(*board + m.from) = ' ';
+    board[m.from_y][m.from_x] = ' ';
 
     // Promote pawn if ^
     if (m.piece == '^')
     {
-        *(*board + m.to) = 'Q';
+        board[m.to_y][m.to_x] = 'Q';
     }
     else if (toupper(m.piece) == 'C') // Castling
     {
-        if (m.from == 60) // Player castling
+        if (m.from_y == 7 && m.from_x == 4) // Player castling
         {
             if (m.piece == 'C') // Kingside
             {
@@ -62,7 +62,7 @@ void move_piece(move_t m)
     }
     else
     {
-        *(*board + m.to) = m.piece;
+        board[m.to_y][m.to_x] = m.piece;
     }
 }
 
@@ -133,25 +133,28 @@ move_t* list_moves()
     move_t *list = malloc(256 * sizeof(move_t));
     size_t list_length = 0;
 
-    for (int i = 0; i<64; i++)
+    for (int i = 0; i < 8; i++)
     {
-        switch (*(*board + i))
+        for (size_t j = 0; j < 8; j++)
         {
-        case 'P': list_length = get_pawn_moves(list, list_length, i / 8, i % 8);
-            break;
-        case 'N': list_length = get_knight_moves(list, list_length, i / 8, i % 8);
-            break;
-        case 'B': list_length = get_bishop_moves(list, list_length, i / 8, i % 8);
-            break;
-        case 'R': list_length = get_rook_moves(list, list_length, i / 8, i % 8);
-            break;
-        case 'Q': list_length = get_queen_moves(list, list_length, i / 8, i % 8);
-            break;
-        case 'K': list_length = get_king_moves(list, list_length, i / 8, i % 8);
-            break;
+            switch (board[i][j])
+            {
+            case 'P': list_length = get_pawn_moves(list, list_length, i, j);
+                break;
+            case 'N': list_length = get_knight_moves(list, list_length, i, j);
+                break;
+            case 'B': list_length = get_bishop_moves(list, list_length, i, j);
+                break;
+            case 'R': list_length = get_rook_moves(list, list_length, i, j);
+                break;
+            case 'Q': list_length = get_queen_moves(list, list_length, i, j);
+                break;
+            case 'K': list_length = get_king_moves(list, list_length, i, j);
+                break;
+            }
         }
     }
-    move_t end = {0, 0, 0, 0};
+    move_t end = {0, 0, 0, 0, 0, 0};
     list[list_length] = end;
     return list;
 }
@@ -199,11 +202,12 @@ int main()
     }
     free(settings);
 
+    print_board(board, state);
 
     move_t *moves = list_moves();
 
     size_t i = 0;
-    while (moves[i].from != 0)
+    while (moves[i].piece != 0)
     {
         log_move(moves[i]);
         i++;

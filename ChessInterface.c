@@ -1,5 +1,11 @@
 #include "ChessInterface.h"
 
+// For printing the board
+const char *LETTERLINE = "    a   b   c   d   e   f   g   h";
+const char *TOPLINE = "  \u250C\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u2510";
+const char *MIDLINE = "  \u251C\u2500\u2500\u2500\u253C\u2500\u2500\u2500\u253C\u2500\u2500\u2500\u253C\u2500\u2500\u2500\u253C\u2500\u2500\u2500\u253C\u2500\u2500\u2500\u253C\u2500\u2500\u2500\u253C\u2500\u2500\u2500\u2524";
+const char *BOTLINE = "  \u2514\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2518";
+
 // The unicode chess symbols are 3 bytes
 char* to_chess_symbol(char c)
 {
@@ -27,41 +33,31 @@ char* to_chess_symbol(char c)
 
 move_t get_move_from_location(char board[8][8], int from_y, int from_x, int to_y, int to_x)
 {
-    move_t move;
-    // calculate locations in 0-63 form
-    move.from = from_y * 8 + from_x;
-    move.to = to_y * 8 + to_x;
-    move.piece = *(*board + move.from);
-    move.target = *(*board + move.to);
+    move_t move = {board[from_y][from_x], from_y, from_x, to_y, to_x, board[to_y][to_x]};
 
     // If castling, the moving piece is C for kingside or c for queenside
     // If promotion, the mobing piece is ^
 
-    if (move.piece == 'K' && move.from == 60) // Castling
+    if (move.piece == 'K' && move.from_y == 7 && move.from_x == 4) // Castling
     {
-        if (move.to == 62) // Kingside
+        if (move.to_y == 7 && move.to_x == 6) // Kingside
         {
             move.piece = 'C';
         }
-        else if (move.to == 58) // Queenside
+        else if (move.to_y == 7 && move.to_x == 2) // Queenside
         {
             move.piece = 'c';
         }
     }
-    else if (move.piece == 'P' && move.to < 8) // Promotion
+    else if (move.piece == 'P' && move.to_y == 1) // Promotion
     {
         move.piece = '^';
     }
     return move;
 }
 
-move_t get_user_move(char board[8][8], state_t state)
+void print_board(char board[8][8], state_t state)
 {
-    const char *LETTERLINE = "    a   b   c   d   e   f   g   h";
-    const char *TOPLINE = "  \u250C\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u2510";
-    const char *MIDLINE = "  \u251C\u2500\u2500\u2500\u253C\u2500\u2500\u2500\u253C\u2500\u2500\u2500\u253C\u2500\u2500\u2500\u253C\u2500\u2500\u2500\u253C\u2500\u2500\u2500\u253C\u2500\u2500\u2500\u253C\u2500\u2500\u2500\u2524";
-    const char *BOTLINE = "  \u2514\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2518";
-
     puts(LETTERLINE);
     puts(TOPLINE);
     for (size_t i = 0; i < 8; i++)
@@ -82,6 +78,12 @@ move_t get_user_move(char board[8][8], state_t state)
             puts(BOTLINE);
         }
     }
+}
+
+move_t get_user_move(char board[8][8], state_t state)
+{
+    print_board(board, state);
+
     const size_t INPUT_SIZE = 8;
     char input[INPUT_SIZE];
 

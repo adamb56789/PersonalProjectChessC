@@ -17,6 +17,11 @@ char* get_settings()
 
 void log_move(move_t move)
 {
-    printf("%c %02d %02d %c\n", move.piece, move.from, move.to, move.target);
+    // int from_y = 8 - (input[1] - 48);
+    // int from_x = input[0] - 97;
+    // int to_y = 8 - (input[3 + has_space] - 48);
+    // int to_x = input[2 + has_space] - 97;
+    printf("%c %c%d %c%d %c\n", move.piece, move.from_x + 97, 8 - move.from_y,
+    move.to_x + 97, 8 - move.to_y, move.target);
     // TODO
 }

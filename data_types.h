@@ -17,8 +17,10 @@ typedef struct
 
 typedef struct {
     char piece;
-    int from;
-    int to;
+    char from_y;
+    char from_x;
+    char to_y;
+    char to_x;
     char target;
 } move_t;
 
