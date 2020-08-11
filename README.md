@@ -20,4 +20,5 @@ This mode is reccomended for players looking for an 'intelligent' opponent. Begg
 
 By default, the settings are as follows:
 Adam's Chess Computer
+
 Normal
