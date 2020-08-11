@@ -19,6 +19,7 @@ Normal is a game mode where the program uses everything it has at it's disposal 
 This mode is reccomended for players looking for an 'intelligent' opponent. Begginer players may also want to try out this mode to see a decent example of a chess player.
 
 By default, the settings are as follows:
+
 Adam's Chess Computer
 
 Normal
