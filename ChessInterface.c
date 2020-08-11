@@ -31,9 +31,19 @@ char* to_chess_symbol(char c)
     }
 }
 
-move_t get_move_from_location(char board[8][8], int from_y, int from_x, int to_y, int to_x)
+move_t to_move(char board[8][8], int from_y, int from_x, int to_y, int to_x)
 {
-    move_t move = {board[from_y][from_x], from_y, from_x, to_y, to_x, board[to_y][to_x]};
+    // If anything is out of bounds then something went wrong
+    // TODO remove this for effeciency
+    if (from_y < 0 || 7 < from_y || from_x < 0 || 7 < from_x ||
+        to_y < 0 || 7 < to_y || to_x < 0 || 7 < to_x)
+    {
+        printf("Out of bounds [%d][%d] [%d][%d]\n", from_y,  from_x, to_y, to_x);
+        exit(EXIT_FAILURE);
+    }
+
+
+    move_t move ={ board[from_y][from_x], from_y, from_x, to_y, to_x, board[to_y][to_x] };
 
     // If castling, the moving piece is C for kingside or c for queenside
     // If promotion, the mobing piece is ^
@@ -98,7 +108,7 @@ move_t get_user_move(char board[8][8], state_t state)
         {
             exit(EXIT_SUCCESS);
         }
-        
+
 
         // check format, accept both "e2e4" and "e2 e4"
         has_space = input[2] == ' ';
@@ -116,5 +126,5 @@ move_t get_user_move(char board[8][8], state_t state)
     int from_x = input[0] - 97;
     int to_y = 8 - (input[3 + has_space] - 48);
     int to_x = input[2 + has_space] - 97;
-    return get_move_from_location(board, from_y, from_x, to_y, to_x);
+    return to_move(board, from_y, from_x, to_y, to_x);
 }

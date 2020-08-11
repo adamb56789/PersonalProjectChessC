@@ -12,10 +12,12 @@ typedef struct
     bool Qcastle;
     bool Kcastle;
     bool canEP;
+    char turn;
     int public_depth;
 } state_t;
 
-typedef struct {
+typedef struct
+{
     char piece;
     char from_y;
     char from_x;
@@ -23,5 +25,11 @@ typedef struct {
     char to_x;
     char target;
 } move_t;
+
+typedef struct
+{
+    char a;
+    char b;
+} pair;
 
 #endif
