@@ -152,6 +152,77 @@ pair get_my_king_location()
 
 bool is_in_check()
 {
+    pair king_location = get_my_king_location();
+    int ky = king_location.y;
+    int kx = king_location.x;
+
+    // Pawn on left
+    if (1 < ky // Simple y bounds check
+        && in_bounds(kx - 1)
+        && board[ky - 1][kx - 1] == 'p')
+    {
+        return true;
+    }
+    // Pawn on right
+    if (1 < ky // Simple y bounds check
+        && in_bounds(kx + 1)
+        && board[ky - 1][kx + 1] == 'p')
+    {
+        return true;
+    }
+
+    // Knights
+    for (int i = 0; i < 8; i++)
+    {
+        int ny = ky + KNIGHT_JUMPS[i].y;
+        int nx = kx + KNIGHT_JUMPS[i].x;
+        if (in_bounds(ny) && in_bounds(nx) && board[ny][nx] == 'n')
+        {
+            return true;
+        }
+    }
+
+    // Queens, rooks, and bishops
+    for (int i = 0; i < 8; i++)
+    {
+        int move_length = 1;
+        while (true)
+        {
+            int ny = ky + QUEEN_DIRECTIONS[i].y * move_length;
+            int nx = kx + QUEEN_DIRECTIONS[i].x * move_length;
+            move_length++;
+
+            bool on_board = in_bounds(ny) && in_bounds(nx);
+            bool straight = (QUEEN_DIRECTIONS[i].y == 0) || (QUEEN_DIRECTIONS[i].x == 0);
+            char piece = board[ny][nx];
+
+            if (on_board && (
+                piece == 'q'
+                || piece == 'r' && straight
+                || piece == 'b' && !straight))
+            {
+                return true;
+            }
+            
+            // If the search can go no further on that line
+            if (!(on_board && piece == ' '))
+            {
+                break;
+            }
+        }
+    }
+
+    // King
+    for (int i = 0; i < 8; i++)
+    {
+        int ny = ky + KING_JUMPS[i].y;
+        int nx = kx + KING_JUMPS[i].x;
+        if (in_bounds(ny) && in_bounds(nx) && board[ny][nx] == 'k')
+        {
+            return true;
+        }
+    }
+
     return false;
 }
 
