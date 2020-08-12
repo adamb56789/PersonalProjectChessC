@@ -135,6 +135,21 @@ void move_piece(move_t m)
     }
 }
 
+pair get_my_king_location()
+{
+    for (int y = 0; y < 8; y++)
+    {
+        for (int x = 0; x < 8; x++)
+        {
+            if (board[y][x] == 'K')
+            {
+                pair location ={y, x};
+                return location;
+            }
+        }
+    }
+}
+
 bool is_in_check()
 {
     return false;
@@ -186,8 +201,8 @@ void generate_jumping_moves(int y, int x, pair *jumps, int jumps_length)
     for (int i = 0; i < jumps_length; i++)
     {
         // new y and new x
-        int ny = y + jumps[i].a;
-        int nx = x + jumps[i].b;
+        int ny = y + jumps[i].y;
+        int nx = x + jumps[i].x;
 
         if (in_bounds(ny)
             && in_bounds(nx)
@@ -207,8 +222,8 @@ void generate_linear_moves(int y, int x, pair *directions, int directions_length
         while (true)
         {
             // new y and new x
-            int ny = y + directions[i].a * move_length;
-            int nx = x + directions[i].b * move_length;
+            int ny = y + directions[i].y * move_length;
+            int nx = x + directions[i].x * move_length;
             move_length++;
 
             bool on_board = in_bounds(ny) && in_bounds(nx);
@@ -303,7 +318,7 @@ void generate_moves()
     }
 }
 
-bool is_legal(move_t m)
+bool is_legal_move(move_t m)
 {
     generate_moves();
     for (int i = 0; i < list_length; i++)
@@ -374,7 +389,7 @@ int main()
         do
         {
             move = get_user_move(board, game);
-        } while (!is_legal(move));
+        } while (!is_legal_move(move));
 
         log_move(move);
         move_piece(move);

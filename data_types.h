@@ -33,8 +33,8 @@ typedef struct
 
 typedef struct
 {
-    char a;
-    char b;
+    char y;
+    char x;
 } pair;
 
 #endif
