@@ -9,6 +9,7 @@
 // en passant
 // promotions other than queen
 // castling out of check
+// stalemate rules
 
 const char *NORMAL = "Normal";
 const char *EASY = "Easy";
@@ -58,45 +59,90 @@ int list_length;
 void move_piece(move_t m)
 {
     board[m.from_y][m.from_x] = ' ';
+    board[m.to_y][m.to_x] = m.piece;
 
     if (m.piece == '^') // Promotion
     {
         board[m.to_y][m.to_x] = 'Q';
     }
-    else if (m.piece == 'C') // Kingside castle
+    else if (m.from_y == 7) // a lot of special things happen on the back rank
     {
-        if (m.from_x == 4) // White
+        if (m.piece == 'C') // Kingside castle
         {
-            board[7][7] = ' ';
-            board[7][6] = 'K';
-            board[7][5] = 'R';
+            if (m.from_x == 4) // White
+            {
+                board[7][7] = ' '; // move the rook as well
+                board[7][6] = 'K';
+                board[7][5] = 'R';
+                game.right_R_stationary = false;
+            }
+            else // Black
+            {
+                board[7][0] = ' ';
+                board[7][1] = 'K';
+                board[7][2] = 'R';
+                game.left_r_stationary = false;
+            }
         }
-        else // Black
+        else if (m.piece == 'c') // Queenside castle
         {
-            board[7][0] = ' ';
-            board[7][1] = 'K';
-            board[7][2] = 'R';
+            if (m.from_x == 4) // White
+            {
+                board[7][0] = ' ';
+                board[7][2] = 'K';
+                board[7][3] = 'R';
+                game.left_R_stationary = false;
+            }
+            else // Black
+            {
+                board[7][7] = ' ';
+                board[7][5] = 'K';
+                board[7][4] = 'R';
+                game.right_r_stationary = false;
+            }
+        }
+
+        if (m.from_x == 0) // left rook movement
+        {
+            if (game.turn == white)
+            {
+                game.left_R_stationary = false;
+            }
+            else
+            {
+                game.left_r_stationary = false;
+            }
+        }
+        else if (m.from_x == 7) // right rook movement
+        {
+            if (game.turn == white)
+            {
+                game.right_R_stationary = false;
+            }
+            else
+            {
+                game.right_r_stationary = false;
+            }
+        }
+        else if (game.turn == white && m.from_x == 4) // white king movement
+        {
+            game.K_stationary = false;
+        }
+        else if (game.turn == black && m.from_y == 3) // black king movement
+        {
+            game.k_stationary = false;
         }
     }
-    else if (m.piece == 'c') // Queenside castle
-    {
-        if (m.from_x == 4) // White
-        {
-            board[7][0] = ' ';
-            board[7][2] = 'K';
-            board[7][3] = 'R';
-        }
-        else // Black
-        {
-            board[7][7] = ' ';
-            board[7][5] = 'K';
-            board[7][4] = 'R';
-        }
-    }
-    else
-    {
-        board[m.to_y][m.to_x] = m.piece;
-    }
+}
+
+bool is_in_check()
+{
+    return false;
+}
+
+bool move_is_safe(move_t m)
+{
+    return true;
 }
 
 bool safeK(int ox, int oy, int nx, int ny)
@@ -191,14 +237,18 @@ void generate_castling_moves(int y, int x)
     {
         if (game.right_R_stationary
             && board[7][6] == ' '
-            && board[7][5] == ' ')
+            && board[7][5] == ' '
+            && !is_in_check()
+            && move_is_safe(KINGSIDE_WHITE))
         {
             list[list_length++] = KINGSIDE_WHITE;
         }
         if (game.left_R_stationary
             && board[7][1] == ' '
             && board[7][2] == ' '
-            && board[7][3] == ' ')
+            && board[7][3] == ' '
+            && !is_in_check()
+            && move_is_safe(QUEENSIDE_WHITE))
         {
             list[list_length++] = QUEENSIDE_WHITE;
         }
@@ -208,13 +258,17 @@ void generate_castling_moves(int y, int x)
         if (game.right_r_stationary
             && board[7][6] == ' '
             && board[7][5] == ' '
-            && board[7][4] == ' ')
+            && board[7][4] == ' '
+            && !is_in_check()
+            && move_is_safe(QUEENSIDE_BLACK))
         {
             list[list_length++] = QUEENSIDE_BLACK;
         }
         if (game.left_r_stationary
             && board[7][1] == ' '
-            && board[7][2] == ' ')
+            && board[7][2] == ' '
+            && !is_in_check()
+            && move_is_safe(KINGSIDE_BLACK))
         {
             list[list_length++] = KINGSIDE_BLACK;
         }
