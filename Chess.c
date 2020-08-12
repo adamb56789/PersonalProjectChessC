@@ -56,7 +56,7 @@ move_t *list;
 const int MAX_LIST_LENGTH = 255;
 int list_length;
 
-void move_piece(move_t m)
+void make_move(move_t m)
 {
     board[m.from_y][m.from_x] = ' ';
     board[m.to_y][m.to_x] = m.piece;
@@ -131,6 +131,89 @@ void move_piece(move_t m)
         else if (game.turn == black && m.from_y == 3) // black king movement
         {
             game.k_stationary = false;
+        }
+    }
+}
+
+void undo_move(move_t m)
+{
+    board[m.from_y][m.from_x] = m.piece;
+    board[m.to_y][m.to_x] = m.target;
+
+    if (m.piece == '^') // Promotion
+    {
+        board[m.from_y][m.from_x] = 'P';
+    }
+    else if (m.from_y == 7) // a lot of special things happen on the back rank
+    {
+        if (m.piece == 'C') // Kingside castle
+        {
+            if (m.from_x == 4) // White
+            {
+                board[7][7] = 'R';
+                board[7][6] = ' ';
+                board[7][5] = ' ';
+                board[7][4] = 'K';
+                game.right_R_stationary = true;
+            }
+            else // Black
+            {
+                board[7][0] = 'R';
+                board[7][1] = ' ';
+                board[7][2] = ' ';
+                board[7][3] = 'K';
+                game.left_r_stationary = true;
+            }
+        }
+        else if (m.piece == 'c') // Queenside castle
+        {
+            if (m.from_x == 4) // White
+            {
+                board[7][0] = 'R';
+                board[7][2] = ' ';
+                board[7][3] = ' ';
+                board[7][4] = 'K';
+                game.left_R_stationary = true;
+            }
+            else // Black
+            {
+                board[7][7] = 'R';
+                board[7][5] = ' ';
+                board[7][4] = ' ';
+                board[7][3] = 'K';
+                game.right_r_stationary = true;
+            }
+        }
+
+        if (m.from_x == 0) // left rook movement
+        {
+            if (game.turn == white)
+            {
+                game.left_R_stationary = true;
+            }
+            else
+            {
+                game.left_r_stationary = true;
+            }
+        }
+        else if (m.from_x == 7) // right rook movement
+        {
+            if (game.turn == white)
+            {
+                game.right_R_stationary = true;
+            }
+            else
+            {
+                game.right_r_stationary = true;
+            }
+        }
+        else if (game.turn == white && m.from_x == 4) // white king movement
+        {
+            game.K_stationary = true;
+        }
+        else if (game.turn == black && m.from_y == 3) // black king movement
+        {
+            game.k_stationary = true;
         }
     }
 }
@@ -228,7 +311,10 @@ bool is_in_check()
 
 bool move_is_safe(move_t m)
 {
-    return true;
+    make_move(m);
+    bool safe = !is_in_check();
+    undo_move(m);
+    return safe;
 }
 
 void generate_pawn_moves(int y, int x)
@@ -465,7 +551,7 @@ int main()
         } while (!is_legal_move(move));
 
         log_move(move);
-        move_piece(move);
+        make_move(move);
     }
 
     return 0;
