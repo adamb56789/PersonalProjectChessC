@@ -1,6 +1,14 @@
 {
     "files.associations": {
         "cmath": "c",
-        "*.tcc": "c"
+        "*.tcc": "c",
+        "bitset": "c",
+        "optional": "c",
+        "fstream": "c",
+        "istream": "c",
+        "ostream": "c",
+        "sstream": "c",
+        "streambuf": "c",
+        "regex": "c"
     }
 }

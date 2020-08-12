@@ -5,6 +5,10 @@
 
 #define in_bounds(x) 0 <= x && x <= 7
 
+// TODO
+// en passant
+// promotions other than queen
+// castling out of check
 
 const char *NORMAL = "Normal";
 const char *EASY = "Easy";
@@ -19,7 +23,13 @@ pair BISHOP_DIRECTIONS[4] ={ -1, -1, -1, 1, 1, -1, 1, 1 };
 pair ROOK_DIRECTIONS[4] ={ -1, 0, 0, -1, 0, 1, 1, 0 };
 pair QUEEN_DIRECTIONS[8] ={ -1, -1, -1, 0, -1, 1, 0, -1, 0, 1, 1, -1, 1, 0, 1, 1 };
 
-state_t state ={ true, true, true, true, true, false, 0 };
+const move_t KINGSIDE_WHITE ={ 'C', 7, 4, 7, 6, ' ' };
+const move_t QUEENSIDE_WHITE ={ 'c', 7, 4, 7, 2, ' ' };
+const move_t KINGSIDE_BLACK ={ 'C', 7, 3, 7, 2, ' ' };
+const move_t QUEENSIDE_BLACK ={ 'c', 7, 3, 7, 6, ' ' };
+
+// left_r and right_r are from black's perspective - right_r is on [0][0] below
+state_t game ={ white, true, true, true, true, true, true };
 
 // char board[8][8] ={
 //     'r', 'n', 'b', 'q', 'k', 'b', 'n', 'r',  //0-7
@@ -49,42 +59,38 @@ void move_piece(move_t m)
 {
     board[m.from_y][m.from_x] = ' ';
 
-    // Promote pawn if ^
-    if (m.piece == '^')
+    if (m.piece == '^') // Promotion
     {
         board[m.to_y][m.to_x] = 'Q';
     }
-    else if (toupper(m.piece) == 'C') // Castling
+    else if (m.piece == 'C') // Kingside castle
     {
-        if (m.from_y == 7 && m.from_x == 4) // Player castling
+        if (m.from_x == 4) // White
         {
-            if (m.piece == 'C') // Kingside
-            {
-                board[7][7] = ' ';
-                board[7][6] = 'K';
-                board[7][5] = 'R';
-            }
-            else // Queenside
-            {
-                board[7][0] = ' ';
-                board[7][2] = 'K';
-                board[7][3] = 'R';
-            }
+            board[7][7] = ' ';
+            board[7][6] = 'K';
+            board[7][5] = 'R';
         }
-        else // Computer castling
+        else // Black
         {
-            if (m.piece == 'C') // Kingside
-            {
-                board[7][0] = ' ';
-                board[7][1] = 'K';
-                board[7][2] = 'R';
-            }
-            else // Queenside
-            {
-                board[7][7] = ' ';
-                board[7][5] = 'K';
-                board[7][4] = 'R';
-            }
+            board[7][0] = ' ';
+            board[7][1] = 'K';
+            board[7][2] = 'R';
+        }
+    }
+    else if (m.piece == 'c') // Queenside castle
+    {
+        if (m.from_x == 4) // White
+        {
+            board[7][0] = ' ';
+            board[7][2] = 'K';
+            board[7][3] = 'R';
+        }
+        else // Black
+        {
+            board[7][7] = ' ';
+            board[7][5] = 'K';
+            board[7][4] = 'R';
         }
     }
     else
@@ -98,7 +104,7 @@ bool safeK(int ox, int oy, int nx, int ny)
     return true;
 }
 
-int generate_pawn_moves(int y, int x)
+void generate_pawn_moves(int y, int x)
 {
     // Move one forward
     if (board[y - 1][x] == ' ')
@@ -110,6 +116,7 @@ int generate_pawn_moves(int y, int x)
         // Move two forward
         // There used to be a try catch here on safeK, I don't think it was necessary
         if (y == 6
+            && board[y - 2][x] == ' '
             && safeK(y, x, y - 2, x))
         {
             list[list_length++] = to_move(board, y, x, y - 2, x);
@@ -126,10 +133,9 @@ int generate_pawn_moves(int y, int x)
             list[list_length++] = to_move(board, y, x, y - 1, x + i);
         }
     }
-    return list_length;
 }
 
-int generate_jumping_moves(int y, int x, pair *jumps, int jumps_length)
+void generate_jumping_moves(int y, int x, pair *jumps, int jumps_length)
 {
     for (int i = 0; i < jumps_length; i++)
     {
@@ -145,10 +151,9 @@ int generate_jumping_moves(int y, int x, pair *jumps, int jumps_length)
             list[list_length++] = to_move(board, y, x, ny, nx);
         }
     }
-    return list_length;
 }
 
-int generate_linear_moves(int y, int x, pair *directions, int directions_length)
+void generate_linear_moves(int y, int x, pair *directions, int directions_length)
 {
     for (int i = 0; i < directions_length; i++)
     {
@@ -177,33 +182,67 @@ int generate_linear_moves(int y, int x, pair *directions, int directions_length)
             }
         }
     }
-    return list_length;
 }
 
-int generate_castling_moves(int y, int x)
+void generate_castling_moves(int y, int x)
 {
-    return list_length;
+    if (game.turn == white
+        && game.K_stationary)
+    {
+        if (game.right_R_stationary
+            && board[7][6] == ' '
+            && board[7][5] == ' ')
+        {
+            list[list_length++] = KINGSIDE_WHITE;
+        }
+        if (game.left_R_stationary
+            && board[7][1] == ' '
+            && board[7][2] == ' '
+            && board[7][3] == ' ')
+        {
+            list[list_length++] = QUEENSIDE_WHITE;
+        }
+    }
+    else if (game.k_stationary)
+    {
+        if (game.right_r_stationary
+            && board[7][6] == ' '
+            && board[7][5] == ' '
+            && board[7][4] == ' ')
+        {
+            list[list_length++] = QUEENSIDE_BLACK;
+        }
+        if (game.left_r_stationary
+            && board[7][1] == ' '
+            && board[7][2] == ' ')
+        {
+            list[list_length++] = KINGSIDE_BLACK;
+        }
+    }
 }
 
 void generate_moves()
 {
+    list_length = 0;
     for (int y = 0; y < 8; y++)
     {
         for (int x = 0; x < 8; x++)
         {
             switch (board[y][x])
             {
-            case 'P': list_length = generate_pawn_moves(y, x);
+            case 'P': generate_pawn_moves(y, x);
                 break;
-            case 'N': list_length = generate_jumping_moves(y, x, KNIGHT_JUMPS, 8);
+            case 'N': generate_jumping_moves(y, x, KNIGHT_JUMPS, 8);
                 break;
-            case 'B': list_length = generate_linear_moves(y, x, BISHOP_DIRECTIONS, 4);
+            case 'B': generate_linear_moves(y, x, BISHOP_DIRECTIONS, 4);
                 break;
-            case 'R': list_length = generate_linear_moves(y, x, ROOK_DIRECTIONS, 4);
+            case 'R': generate_linear_moves(y, x, ROOK_DIRECTIONS, 4);
                 break;
-            case 'Q': list_length = generate_linear_moves(y, x, QUEEN_DIRECTIONS, 8);
+            case 'Q': generate_linear_moves(y, x, QUEEN_DIRECTIONS, 8);
                 break;
-            case 'K': list_length = generate_jumping_moves(y, x, KING_JUMPS, 8);
+            case 'K':
+                generate_jumping_moves(y, x, KING_JUMPS, 8);
+                generate_castling_moves(y, x);
                 break;
             }
         }
@@ -212,7 +251,19 @@ void generate_moves()
 
 bool is_legal(move_t m)
 {
-    return true;
+    generate_moves();
+    for (int i = 0; i < list_length; i++)
+    {
+        if (m.from_y == list[i].from_y
+            && m.from_x == list[i].from_x
+            && m.to_y == list[i].to_y
+            && m.to_x == list[i].to_x)
+        {
+            return true;
+        }
+    }
+    puts("That is not a legal move");
+    return false;
 }
 
 int main()
@@ -240,11 +291,11 @@ int main()
     // Difficulty setting
     if (strcmp(settings, NORMAL) == 0)
     {
-        state.public_depth = 4;
+        game.public_depth = 4;
     }
     else if (strcmp(settings, EASY) == 0)
     {
-        state.public_depth = 0;
+        game.public_depth = 0;
     }
     else
     {
@@ -253,28 +304,27 @@ int main()
     }
     free(settings);
 
-    print_board(board, state);
+    print_board(board, game);
 
     list = malloc(MAX_LIST_LENGTH * sizeof(move_t));
-    list_length = 0;
-    generate_moves();
-
-    for (int i = 0; i < list_length; i++)
-    {
-        log_move(list[i]);
-    }
-
-    // while (true)
+    // generate_moves();
+    // for (int i = 0; i < list_length; i++)
     // {
-    //     move_t move;
-    //     do
-    //     {
-    //         move = get_user_move(board, state);
-    //     } while (!is_legal(move));
-
-    //     log_move(move);
-    //     move_piece(move);
+    //     log_move(list[i]);
     // }
+
+    while (true)
+    {
+        print_board(board, game);
+        move_t move;
+        do
+        {
+            move = get_user_move(board, game);
+        } while (!is_legal(move));
+
+        log_move(move);
+        move_piece(move);
+    }
 
     return 0;
 }

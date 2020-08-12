@@ -66,7 +66,7 @@ move_t to_move(char board[8][8], int from_y, int from_x, int to_y, int to_x)
     return move;
 }
 
-void print_board(char board[8][8], state_t state)
+void print_board(char board[8][8], state_t game)
 {
     puts(LETTERLINE);
     puts(TOPLINE);
@@ -90,12 +90,9 @@ void print_board(char board[8][8], state_t state)
     }
 }
 
-move_t get_user_move(char board[8][8], state_t state)
+move_t get_user_move(char board[8][8], state_t game)
 {
-    print_board(board, state);
-
-    const size_t INPUT_SIZE = 8;
-    char input[INPUT_SIZE];
+    char input[255];
 
     bool valid = true;
     bool has_space;

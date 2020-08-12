@@ -1,18 +1,23 @@
 #ifndef DATA_TYPES_H
 #define DATA_TYPES_H
 
-
 #include <stdbool.h>
+
+enum player
+{
+    white,
+    black
+};
 
 typedef struct
 {
-    bool move;
-    bool qcastle;
-    bool kcastle;
-    bool Qcastle;
-    bool Kcastle;
-    bool canEP;
-    char turn;
+    enum player turn;
+    bool left_r_stationary;
+    bool k_stationary;
+    bool right_r_stationary;
+    bool left_R_stationary;
+    bool K_stationary;
+    bool right_R_stationary;
     int public_depth;
 } state_t;
 
