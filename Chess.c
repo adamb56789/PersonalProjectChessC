@@ -160,38 +160,36 @@ bool move_is_safe(move_t m)
     return true;
 }
 
-bool safeK(int ox, int oy, int nx, int ny)
-{
-    return true;
-}
-
 void generate_pawn_moves(int y, int x)
 {
     // Move one forward
     if (board[y - 1][x] == ' ')
     {
-        if (safeK(y, x, y - 1, x))
+        move_t m ={ board[y][x], y, x, y - 1, x, board[y - 1][x] };
+        if (move_is_safe(m))
         {
-            list[list_length++] = to_move(board, y, x, y - 1, x);
+            list[list_length++] = m;
         }
         // Move two forward
         // There used to be a try catch here on safeK, I don't think it was necessary
-        if (y == 6
-            && board[y - 2][x] == ' '
-            && safeK(y, x, y - 2, x))
+        move_t m_2 ={ board[y][x], y, x, y - 2, x, board[y - 2][x] };
+        if (y == 6 && board[y - 2][x] == ' '
+            && move_is_safe(m_2))
         {
-            list[list_length++] = to_move(board, y, x, y - 2, x);
+            list[list_length++] = m_2;
         }
     }
 
     // Diagonal capture
     for (int i = -1; i <= 1; i += 2)
     {
-        if (in_bounds(x + i)
-            && islower(board[y - 1][x + i])
-            && safeK(y, x, y - 1, x + i))
+        if (in_bounds(x + i))
         {
-            list[list_length++] = to_move(board, y, x, y - 1, x + i);
+            move_t m ={ board[y][x], y, x, y - 1, x + i, board[y - 1][x + i] };
+            if (islower(board[y - 1][x + i]) && move_is_safe(m))
+            {
+                list[list_length++] = m;
+            }
         }
     }
 }
@@ -204,12 +202,13 @@ void generate_jumping_moves(int y, int x, pair *jumps, int jumps_length)
         int ny = y + jumps[i].y;
         int nx = x + jumps[i].x;
 
-        if (in_bounds(ny)
-            && in_bounds(nx)
-            && !isupper(board[ny][nx])
-            && safeK(y, x, ny, nx))
+        if (in_bounds(ny) && in_bounds(nx))
         {
-            list[list_length++] = to_move(board, y, x, ny, nx);
+            move_t m ={ board[y][x], y, x, ny, nx, board[ny][nx] };
+            if (!isupper(board[ny][nx]) && move_is_safe(m))
+            {
+                list[list_length++] = m;
+            }
         }
     }
 }
@@ -229,12 +228,15 @@ void generate_linear_moves(int y, int x, pair *directions, int directions_length
             bool on_board = in_bounds(ny) && in_bounds(nx);
 
             // Move if possible
-            if (on_board
-                && !isupper(board[ny][nx])
-                && safeK(y, x, ny, nx))
+            if (on_board)
             {
-                list[list_length++] = to_move(board, y, x, ny, nx);
+                move_t m ={ board[y][x], y, x, ny, nx, board[ny][nx] };
+                if (!isupper(board[ny][nx]) && move_is_safe(m))
+                {
+                    list[list_length++] = m;
+                }
             }
+            
             // If out of bounds or if the move was a capture then
             // stop getting moves from that line
             if (!(on_board && board[ny][nx] == ' '))
