@@ -589,7 +589,7 @@ move_t get_move_pieces(user_move_t user_m)
         user_m.to_x,
         board[user_m.to_y][user_m.to_x] };
 
-    if (m.piece == 'P' && m.to_y == 1) // Promotion
+    if (m.piece == 'P' && m.to_y == 0) // Promotion
     {
         m.piece = '^';
     }
