@@ -214,7 +214,7 @@ void make_move(move_t m)
         {
             game.K_stationary = false;
         }
-        else if (game.turn == black && m.from_y == 3) // black king movement
+        else if (game.turn == black && m.from_x == 3) // black king movement
         {
             game.k_stationary = false;
         }
@@ -297,7 +297,7 @@ void undo_move(move_t m)
         {
             game.K_stationary = true;
         }
-        else if (game.turn == black && m.from_y == 3) // black king movement
+        else if (game.turn == black && m.from_x == 3) // black king movement
         {
             game.k_stationary = true;
         }
@@ -662,9 +662,9 @@ int main()
             move = get_move_pieces(get_user_move());
         } while (!is_legal_move(move));
 
-        printf("User move: ");
         log_move(move);
         make_move(move);
+        rotate_board();
     }
 
     return 0;
