@@ -31,6 +31,30 @@ char* to_chess_symbol(char c)
     }
 }
 
+char* to_chess_symbol_inverted_colour(char c)
+{
+    switch (c)
+    {
+    case 'k': return "\u2654"; break;
+    case 'q': return "\u2655"; break;
+    case 'r': return "\u2656"; break;
+    case 'b': return "\u2657"; break;
+    case 'n': return "\u2658"; break;
+    case 'p': return "\u2659"; break;
+    case 'K': return "\u265A"; break;
+    case 'Q': return "\u265B"; break;
+    case 'R': return "\u265C"; break;
+    case 'B': return "\u265D"; break;
+    case 'N': return "\u265E"; break;
+    case 'P': return "\u265F"; break;
+    case ' ': return " "; break;
+    default:
+        printf("Cannot print '%c' which is not a valid piece", c);
+        exit(EXIT_FAILURE);
+        break;
+    }
+}
+
 move_t to_move(char board[8][8], int from_y, int from_x, int to_y, int to_x)
 {
     // If anything is out of bounds then something went wrong
@@ -57,7 +81,16 @@ void print_board(char board[8][8], state_t game)
         printf("%d \u2502", 8 - i);
         for (size_t j = 0; j < 8; j++)
         {
-            printf(" %s \u2502", to_chess_symbol(board[i][j]));
+            if (game.turn == white)
+            {
+                // Colours are inverted since on a black background,
+                // the black pieces appear as solid white
+                printf(" %s \u2502", to_chess_symbol_inverted_colour(board[i][j]));
+            }
+            else
+            {
+                printf(" %s \u2502", to_chess_symbol(board[i][j]));
+            }
             // printf(" %s \u2502", board[i][j]);
         }
         printf("\n");

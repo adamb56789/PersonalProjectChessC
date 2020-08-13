@@ -659,13 +659,30 @@ int main()
         move_t move;
         do
         {
-            move = get_move_pieces(get_user_move());
+            move = get_move_pieces(get_user_move(game.turn));
         } while (!is_legal_move(move));
 
         log_move(move);
         make_move(move);
         rotate_board();
-    }
 
-    return 0;
+        generate_moves();
+        if (list_length == 0)
+        {
+            if (is_in_check())
+            {
+                rotate_board();
+                print_board(board, game);
+                puts("Checkmate!");
+                return 0;
+            }
+            else
+            {
+                rotate_board();
+                print_board(board, game);
+                puts("Stalemate");
+                return 0;
+            }
+        }
+    }
 }
