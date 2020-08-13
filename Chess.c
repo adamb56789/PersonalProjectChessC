@@ -5,6 +5,8 @@
 
 #define in_bounds(x) 0 <= x && x <= 7
 
+#define swap_case(x) x = isupper(x) ? tolower(x) : toupper(x)
+
 // TODO
 // en passant
 // promotions other than queen
@@ -26,11 +28,13 @@ pair QUEEN_DIRECTIONS[8] ={ -1, -1, -1, 0, -1, 1, 0, -1, 0, 1, 1, -1, 1, 0, 1, 1
 
 const move_t KINGSIDE_WHITE ={ 'C', 7, 4, 7, 6, ' ' };
 const move_t QUEENSIDE_WHITE ={ 'c', 7, 4, 7, 2, ' ' };
-const move_t KINGSIDE_BLACK ={ 'C', 7, 3, 7, 2, ' ' };
-const move_t QUEENSIDE_BLACK ={ 'c', 7, 3, 7, 6, ' ' };
+const move_t KINGSIDE_BLACK ={ 'C', 7, 3, 7, 1, ' ' };
+const move_t QUEENSIDE_BLACK ={ 'c', 7, 3, 7, 5, ' ' };
 
-// left_r and right_r are from black's perspective - right_r is on [0][0] below
-state_t game ={ white, true, true, true, true, true, true };
+// char STARTING_POSITION[] =
+//     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+char STARTING_POSITION[] =
+    "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1";
 
 // char board[8][8] ={
 //     'r', 'n', 'b', 'q', 'k', 'b', 'n', 'r',  //0-7
@@ -42,19 +46,101 @@ state_t game ={ white, true, true, true, true, true, true };
 //     'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P',  //48-55
 //     'R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R' };//56-63
 
-char board[8][8] ={
-    'r', ' ', ' ', 'q', ' ', 'r', 'k', ' ',  //0-7
-    ' ', 'b', ' ', ' ', 'p', 'p', 'b', ' ',  //8-15
-    ' ', 'p', ' ', ' ', ' ', ' ', 'p', 'p',  //16-23
-    'p', ' ', 'n', 'n', 'N', ' ', ' ', ' ',  //24-31
-    'P', 'P', ' ', ' ', ' ', ' ', ' ', 'N',  //32-39
-    ' ', ' ', 'P', ' ', ' ', ' ', ' ', ' ',  //40-47
-    ' ', ' ', 'B', 'B', ' ', 'P', 'P', 'P',  //48-55
-    'R', ' ', ' ', 'Q', 'K', ' ', ' ', 'R' };//56-63
+// char board[8][8] ={
+//     'r', ' ', ' ', ' ', ' ', 'r', 'k', ' ',  //0-7
+//     ' ', 'b', ' ', 'q', 'p', 'p', 'b', ' ',  //8-15
+//     ' ', 'p', ' ', ' ', ' ', ' ', 'p', 'p',  //16-23
+//     'p', ' ', 'n', 'n', 'N', ' ', ' ', ' ',  //24-31
+//     'P', 'P', ' ', ' ', ' ', ' ', ' ', 'N',  //32-39
+//     ' ', ' ', 'P', ' ', ' ', ' ', ' ', ' ',  //40-47
+//     ' ', ' ', 'B', 'B', ' ', 'P', 'P', 'P',  //48-55
+//     ' ', 'K', 'R', ' ', ' ', ' ', ' ', 'R' };//56-63
 
-move_t *list;
+char board[8][8] = {};
+
+// left_r and right_r are from black's perspective - right_r is on [0][0] below
+state_t game ={ white, false, false, false, false, false, false };
+
+
 const int MAX_LIST_LENGTH = 255;
+move_t *list;
 int list_length;
+
+void rotate_board() // swaps piece colour as well as move pieces
+{
+    game.turn = game.turn == white ? black : white;
+    for (int y = 0; y < 8; y++)
+    {
+        for (int x = 0; x < 4; x++)
+        {
+            int ry = 7 - y;
+            int rx = 7 - x;
+            swap_case(board[y][x]);
+            swap_case(board[ry][rx]);
+            char temp = board[y][x];
+            board[y][x] = board[ry][rx];
+            board[ry][rx] = temp;
+        }
+    }
+}
+
+void initialise_board(char *fen)
+{
+    memset(board, ' ', 64);
+    int i = 0;
+    int y = 0;
+    int x = 0;
+    bool play_as_black = false;
+    while (fen[i] != ' ')
+    {
+        if (fen[i] == '/')
+        {
+            y++;
+            x = 0;
+        }
+        else if (isdigit(fen[i]))
+        {
+            x += fen[i] - 48;;
+        }
+        else
+        {
+            board[y][x++] = fen[i];
+        }
+        i++;
+    }
+    i++;
+    play_as_black = fen[i] == 'b';
+    i += 2;
+    while (fen[i] != ' ')
+    {
+        switch (fen[i])
+        {
+        case 'K':
+            game.K_stationary = true;
+            game.kingside_R_stationary = true;
+            break;
+        case 'Q':
+            game.K_stationary = true;
+            game.queenside_R_stationary = true;
+            break;
+        case 'k':
+            game.k_stationary = true;
+            game.kingside_r_stationary = true;
+            break;
+        case 'q':
+            game.k_stationary = true;
+            game.queenside_r_stationary = true;
+            break;
+        default:
+            break;
+        }
+        i++;
+    }
+    if (play_as_black)
+    {
+        rotate_board();
+    }
+}
 
 void make_move(move_t m)
 {
@@ -74,14 +160,14 @@ void make_move(move_t m)
                 board[7][7] = ' '; // move the rook as well
                 board[7][6] = 'K';
                 board[7][5] = 'R';
-                game.right_R_stationary = false;
+                game.kingside_R_stationary = false;
             }
             else // Black
             {
                 board[7][0] = ' ';
                 board[7][1] = 'K';
                 board[7][2] = 'R';
-                game.left_r_stationary = false;
+                game.kingside_r_stationary = false;
             }
         }
         else if (m.piece == 'c') // Queenside castle
@@ -91,14 +177,14 @@ void make_move(move_t m)
                 board[7][0] = ' ';
                 board[7][2] = 'K';
                 board[7][3] = 'R';
-                game.left_R_stationary = false;
+                game.queenside_R_stationary = false;
             }
             else // Black
             {
                 board[7][7] = ' ';
                 board[7][5] = 'K';
                 board[7][4] = 'R';
-                game.right_r_stationary = false;
+                game.queenside_r_stationary = false;
             }
         }
 
@@ -106,22 +192,22 @@ void make_move(move_t m)
         {
             if (game.turn == white)
             {
-                game.left_R_stationary = false;
+                game.queenside_R_stationary = false;
             }
             else
             {
-                game.left_r_stationary = false;
+                game.kingside_r_stationary = false;
             }
         }
         else if (m.from_x == 7) // right rook movement
         {
             if (game.turn == white)
             {
-                game.right_R_stationary = false;
+                game.kingside_R_stationary = false;
             }
             else
             {
-                game.right_r_stationary = false;
+                game.queenside_r_stationary = false;
             }
         }
         else if (game.turn == white && m.from_x == 4) // white king movement
@@ -154,7 +240,7 @@ void undo_move(move_t m)
                 board[7][6] = ' ';
                 board[7][5] = ' ';
                 board[7][4] = 'K';
-                game.right_R_stationary = true;
+                game.kingside_R_stationary = true;
             }
             else // Black
             {
@@ -162,7 +248,7 @@ void undo_move(move_t m)
                 board[7][1] = ' ';
                 board[7][2] = ' ';
                 board[7][3] = 'K';
-                game.left_r_stationary = true;
+                game.kingside_r_stationary = true;
             }
         }
         else if (m.piece == 'c') // Queenside castle
@@ -173,7 +259,7 @@ void undo_move(move_t m)
                 board[7][2] = ' ';
                 board[7][3] = ' ';
                 board[7][4] = 'K';
-                game.left_R_stationary = true;
+                game.queenside_R_stationary = true;
             }
             else // Black
             {
@@ -181,7 +267,7 @@ void undo_move(move_t m)
                 board[7][5] = ' ';
                 board[7][4] = ' ';
                 board[7][3] = 'K';
-                game.right_r_stationary = true;
+                game.queenside_r_stationary = true;
             }
         }
 
@@ -189,22 +275,22 @@ void undo_move(move_t m)
         {
             if (game.turn == white)
             {
-                game.left_R_stationary = true;
+                game.queenside_R_stationary = true;
             }
             else
             {
-                game.left_r_stationary = true;
+                game.kingside_r_stationary = true;
             }
         }
         else if (m.from_x == 7) // right rook movement
         {
             if (game.turn == white)
             {
-                game.right_R_stationary = true;
+                game.kingside_R_stationary = true;
             }
             else
             {
-                game.right_r_stationary = true;
+                game.queenside_r_stationary = true;
             }
         }
         else if (game.turn == white && m.from_x == 4) // white king movement
@@ -404,12 +490,12 @@ void generate_linear_moves(int y, int x, pair *directions, int directions_length
     }
 }
 
-void generate_castling_moves(int y, int x)
+void generate_castling_moves(int y, int x) // causes king to appear at spawnpoint
 {
     if (game.turn == white
         && game.K_stationary)
     {
-        if (game.right_R_stationary
+        if (game.kingside_R_stationary
             && board[7][6] == ' '
             && board[7][5] == ' '
             && !is_in_check()
@@ -417,7 +503,7 @@ void generate_castling_moves(int y, int x)
         {
             list[list_length++] = KINGSIDE_WHITE;
         }
-        if (game.left_R_stationary
+        if (game.queenside_R_stationary
             && board[7][1] == ' '
             && board[7][2] == ' '
             && board[7][3] == ' '
@@ -429,7 +515,7 @@ void generate_castling_moves(int y, int x)
     }
     else if (game.k_stationary)
     {
-        if (game.right_r_stationary
+        if (game.queenside_r_stationary
             && board[7][6] == ' '
             && board[7][5] == ' '
             && board[7][4] == ' '
@@ -438,7 +524,7 @@ void generate_castling_moves(int y, int x)
         {
             list[list_length++] = QUEENSIDE_BLACK;
         }
-        if (game.left_r_stationary
+        if (game.kingside_r_stationary
             && board[7][1] == ' '
             && board[7][2] == ' '
             && !is_in_check()
@@ -494,9 +580,37 @@ bool is_legal_move(move_t m)
     return false;
 }
 
+move_t get_move_pieces(user_move_t user_m)
+{
+    move_t m ={ board[user_m.from_y][user_m.from_x],
+        user_m.from_y,
+        user_m.from_x,
+        user_m.to_y,
+        user_m.to_x,
+        board[user_m.to_y][user_m.to_x] };
+
+    if (m.piece == 'P' && m.to_y == 1) // Promotion
+    {
+        m.piece = '^';
+    }
+    else if (m.piece == 'K' && m.from_y == 7) // Castling (could be illegal)
+    {
+        if (m.from_x == 4 && m.to_x == 6 || m.from_x == 3 && m.to_x == 1)
+        {
+            m.piece = 'C'; // Kingside
+        }
+        else if (m.from_x == 4 && m.to_x == 2 || m.from_x == 3 && m.to_x == 5)
+        {
+            m.piece = 'c'; // Queenside
+        }
+    }
+    return m;
+}
+
 int main()
 {
-    // Get settings
+    initialise_board(STARTING_POSITION);
+
     char *settings = get_settings();
     puts(settings);
 
@@ -532,8 +646,6 @@ int main()
     }
     free(settings);
 
-    print_board(board, game);
-
     list = malloc(MAX_LIST_LENGTH * sizeof(move_t));
     // generate_moves();
     // for (int i = 0; i < list_length; i++)
@@ -547,9 +659,10 @@ int main()
         move_t move;
         do
         {
-            move = get_user_move(board, game);
+            move = get_move_pieces(get_user_move());
         } while (!is_legal_move(move));
 
+        printf("User move: ");
         log_move(move);
         make_move(move);
     }

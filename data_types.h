@@ -12,12 +12,12 @@ enum player
 typedef struct
 {
     enum player turn;
-    bool left_r_stationary;
+    bool queenside_r_stationary;
     bool k_stationary;
-    bool right_r_stationary;
-    bool left_R_stationary;
+    bool kingside_r_stationary;
+    bool queenside_R_stationary;
     bool K_stationary;
-    bool right_R_stationary;
+    bool kingside_R_stationary;
     int public_depth;
 } state_t;
 
@@ -30,6 +30,14 @@ typedef struct
     char to_x;
     char target;
 } move_t;
+
+typedef struct
+{
+    char from_y;
+    char from_x;
+    char to_y;
+    char to_x;
+} user_move_t;
 
 typedef struct
 {
