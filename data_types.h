@@ -29,6 +29,7 @@ typedef struct
     char to_y;
     char to_x;
     char target;
+    char promotion_piece;
 } move_t;
 
 typedef struct
@@ -37,6 +38,7 @@ typedef struct
     char from_x;
     char to_y;
     char to_x;
+    char promotion_piece;
 } user_move_t;
 
 typedef struct

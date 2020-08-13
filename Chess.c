@@ -7,11 +7,11 @@
 
 #define swap_case(x) x = isupper(x) ? tolower(x) : toupper(x)
 
-// TODO
-// en passant
-// promotions other than queen
-// castling out of check
-// stalemate rules
+/* TODO
+    en passant
+    threefold repetition
+    50 move rule
+*/
 
 const char *NORMAL = "Normal";
 const char *EASY = "Easy";
@@ -35,26 +35,6 @@ const move_t QUEENSIDE_BLACK ={ 'c', 7, 3, 7, 5, ' ' };
 //     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 char STARTING_POSITION[] =
     "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1";
-
-// char board[8][8] ={
-//     'r', 'n', 'b', 'q', 'k', 'b', 'n', 'r',  //0-7
-//     'p', 'p', 'p', 'p', 'p', 'p', 'p', 'p',  //8-15
-//     ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  //16-23
-//     ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  //24-31
-//     ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  //32-39
-//     ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  //40-47
-//     'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P',  //48-55
-//     'R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R' };//56-63
-
-// char board[8][8] ={
-//     'r', ' ', ' ', ' ', ' ', 'r', 'k', ' ',  //0-7
-//     ' ', 'b', ' ', 'q', 'p', 'p', 'b', ' ',  //8-15
-//     ' ', 'p', ' ', ' ', ' ', ' ', 'p', 'p',  //16-23
-//     'p', ' ', 'n', 'n', 'N', ' ', ' ', ' ',  //24-31
-//     'P', 'P', ' ', ' ', ' ', ' ', ' ', 'N',  //32-39
-//     ' ', ' ', 'P', ' ', ' ', ' ', ' ', ' ',  //40-47
-//     ' ', ' ', 'B', 'B', ' ', 'P', 'P', 'P',  //48-55
-//     ' ', 'K', 'R', ' ', ' ', ' ', ' ', 'R' };//56-63
 
 char board[8][8] = {};
 
@@ -149,7 +129,8 @@ void make_move(move_t m)
 
     if (m.piece == '^') // Promotion
     {
-        board[m.to_y][m.to_x] = 'Q';
+        // default to queen
+        board[m.to_y][m.to_x] = m.promotion_piece == ' ' ? 'Q' : m.promotion_piece;
     }
     else if (m.from_y == 7) // a lot of special things happen on the back rank
     {
@@ -405,33 +386,73 @@ bool move_is_safe(move_t m)
 
 void generate_pawn_moves(int y, int x)
 {
-    // Move one forward
-    if (board[y - 1][x] == ' ')
+    if (y == 1) // Promotion
     {
-        move_t m ={ board[y][x], y, x, y - 1, x, board[y - 1][x] };
-        if (move_is_safe(m))
+        // Move one forward
+        if (board[y - 1][x] == ' ')
         {
-            list[list_length++] = m;
+            move_t mq ={ '^', y, x, y - 1, x, board[y - 1][x], 'Q' };
+            if (move_is_safe(mq))
+            {
+                move_t mr ={ '^', y, x, y - 1, x, board[y - 1][x], 'R' };
+                move_t mb ={ '^', y, x, y - 1, x, board[y - 1][x], 'B' };
+                move_t mn ={ '^', y, x, y - 1, x, board[y - 1][x], 'N' };
+                list[list_length++] = mq;
+                list[list_length++] = mr;
+                list[list_length++] = mb;
+                list[list_length++] = mn;
+            }
         }
-        // Move two forward
-        // There used to be a try catch here on safeK, I don't think it was necessary
-        move_t m_2 ={ board[y][x], y, x, y - 2, x, board[y - 2][x] };
-        if (y == 6 && board[y - 2][x] == ' '
-            && move_is_safe(m_2))
+
+        // Diagonal capture
+        for (int i = -1; i <= 1; i += 2)
         {
-            list[list_length++] = m_2;
+            if (in_bounds(x + i))
+            {
+                move_t mq ={ '^', y, x, y - 1, x + i, board[y - 1][x + i], 'Q' };
+                if (islower(board[y - 1][x + i]) && move_is_safe(mq))
+                {
+                    move_t mr ={ '^', y, x, y - 1, x + i, board[y - 1][x + i], 'R' };
+                    move_t mb ={ '^', y, x, y - 1, x + i, board[y - 1][x + i], 'B' };
+                    move_t mn ={ '^', y, x, y - 1, x + i, board[y - 1][x + i], 'N' };
+                    list[list_length++] = mq;
+                    list[list_length++] = mr;
+                    list[list_length++] = mb;
+                    list[list_length++] = mn;
+                }
+            }
         }
     }
-
-    // Diagonal capture
-    for (int i = -1; i <= 1; i += 2)
+    else // Normal moves
     {
-        if (in_bounds(x + i))
+        // Move one forward
+        if (board[y - 1][x] == ' ')
         {
-            move_t m ={ board[y][x], y, x, y - 1, x + i, board[y - 1][x + i] };
-            if (islower(board[y - 1][x + i]) && move_is_safe(m))
+            move_t m ={ 'P', y, x, y - 1, x, board[y - 1][x] };
+            if (move_is_safe(m))
             {
                 list[list_length++] = m;
+            }
+            // Move two forward
+            // There used to be a try catch here on safeK, I don't think it was necessary
+            move_t m_2 ={ 'P', y, x, y - 2, x, board[y - 2][x] };
+            if (y == 6 && board[y - 2][x] == ' '
+                && move_is_safe(m_2))
+            {
+                list[list_length++] = m_2;
+            }
+        }
+
+        // Diagonal capture
+        for (int i = -1; i <= 1; i += 2)
+        {
+            if (in_bounds(x + i))
+            {
+                move_t m ={ 'P', y, x, y - 1, x + i, board[y - 1][x + i] };
+                if (islower(board[y - 1][x + i]) && move_is_safe(m))
+                {
+                    list[list_length++] = m;
+                }
             }
         }
     }
@@ -492,8 +513,7 @@ void generate_linear_moves(int y, int x, pair *directions, int directions_length
 
 void generate_castling_moves(int y, int x) // causes king to appear at spawnpoint
 {
-    if (game.turn == white
-        && game.K_stationary)
+    if (game.turn == white && game.K_stationary)
     {
         if (game.kingside_R_stationary
             && board[7][6] == ' '
@@ -513,7 +533,7 @@ void generate_castling_moves(int y, int x) // causes king to appear at spawnpoin
             list[list_length++] = QUEENSIDE_WHITE;
         }
     }
-    else if (game.k_stationary)
+    else if (game.turn == black && game.k_stationary)
     {
         if (game.queenside_r_stationary
             && board[7][6] == ' '
@@ -561,6 +581,10 @@ void generate_moves()
             }
         }
     }
+    // for (int i = 0; i < list_length; i++)
+    // {
+    //     log_move(list[i]);
+    // }
 }
 
 bool is_legal_move(move_t m)
@@ -568,6 +592,8 @@ bool is_legal_move(move_t m)
     generate_moves();
     for (int i = 0; i < list_length; i++)
     {
+        // this doesn't need to check for promotion piece
+        // as that can never affect legality
         if (m.from_y == list[i].from_y
             && m.from_x == list[i].from_x
             && m.to_y == list[i].to_y
@@ -587,7 +613,8 @@ move_t get_move_pieces(user_move_t user_m)
         user_m.from_x,
         user_m.to_y,
         user_m.to_x,
-        board[user_m.to_y][user_m.to_x] };
+        board[user_m.to_y][user_m.to_x],
+        m.promotion_piece = user_m.promotion_piece };
 
     if (m.piece == 'P' && m.to_y == 0) // Promotion
     {
@@ -647,11 +674,6 @@ int main()
     free(settings);
 
     list = malloc(MAX_LIST_LENGTH * sizeof(move_t));
-    // generate_moves();
-    // for (int i = 0; i < list_length; i++)
-    // {
-    //     log_move(list[i]);
-    // }
 
     while (true)
     {

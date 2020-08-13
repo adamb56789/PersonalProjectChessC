@@ -17,7 +17,7 @@ char* get_settings()
 
 void log_move(move_t move)
 {
-    printf("%c %c%d %c%d %c\n", move.piece, move.from_x + 97, 8 - move.from_y,
-        move.to_x + 97, 8 - move.to_y, move.target);
+    printf("%c %c%d %c%d %c %c\n", move.piece, move.from_x + 97, 8 - move.from_y,
+        move.to_x + 97, 8 - move.to_y, move.target, move.promotion_piece);
     // TODO log to files
 }

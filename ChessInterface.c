@@ -108,9 +108,8 @@ void print_board(char board[8][8], state_t game)
 user_move_t get_user_move()
 {
     char input[255];
-
     bool valid = true;
-    bool has_space;
+    bool promotion_entered = false;
     do
     {
         printf("Enter move: ");
@@ -121,22 +120,31 @@ user_move_t get_user_move()
             exit(EXIT_SUCCESS);
         }
 
-        // check format, accept both "e2e4" and "e2 e4"
-        has_space = input[2] == ' ';
-        valid = 'a' <= input[0] && input[0] <= 'h';
-        valid &= '1' <= input[1] && input[1] <= '8';
-        valid &= 'a' <= input[2 + has_space] && input[2 + has_space] <= 'h';
-        valid &= '1' <= input[3 + has_space] && input[3 + has_space] <= '8';
+        valid = 'a' <= input[0] && input[0] <= 'h'
+            && '1' <= input[1] && input[1] <= '8'
+            && 'a' <= input[2] && input[2] <= 'h'
+            && '1' <= input[3] && input[3] <= '8';
+        
+        if (input[4] != '\n')
+        {
+            promotion_entered = true;
+            valid = valid
+                && input[4] == ' '
+                && input[6] == '\n'
+                && (input[5] == 'q' || input[5] == 'r' || input[5] == 'b' || input[5] == 'n');
+        }
+        
         if (!valid)
         {
-            puts("Invalid input, should look like e2e4 or e2 e4. Type exit to exit.");
+            puts("Invalid input, should look like e2e4 or a7a8 b (promotion to bishop). Type exit to exit.");
         }
     } while (!valid);
 
     int from_y = 8 - (input[1] - 48);
     int from_x = input[0] - 97;
-    int to_y = 8 - (input[3 + has_space] - 48);
-    int to_x = input[2 + has_space] - 97;
+    int to_y = 8 - (input[3] - 48);
+    int to_x = input[2] - 97;
+    char promotion_piece = promotion_entered ? input[5] - 32 : ' ';
 
     // If anything is out of bounds then something went wrong
     // TODO remove this for effeciency
@@ -147,6 +155,6 @@ user_move_t get_user_move()
         exit(EXIT_FAILURE);
     }
 
-    user_move_t move ={ from_y, from_x, to_y, to_x };
+    user_move_t move ={ from_y, from_x, to_y, to_x, promotion_piece };
     return move;
 }
