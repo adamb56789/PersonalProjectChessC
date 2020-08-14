@@ -8,7 +8,6 @@
 #define swap_case(x) x = isupper(x) ? tolower(x) : toupper(x)
 
 /* TODO
-    bug: en passant reveal-checking oneself is not prevented
     stalemate rules except no valid moves
 */
 
@@ -142,7 +141,7 @@ void make_move(move_t m)
         board[m.to_y][m.to_x] = 'P';
         board[m.from_y][m.to_x] = ' ';
     }
-    else if (m.from_y == 7) // a lot of special things happen on the back rank
+    else if (m.from_y == 7) // castling and castling conditions
     {
         if (m.piece == 'C') // Kingside castle
         {
@@ -467,7 +466,10 @@ void generate_pawn_moves(move_t *moves, int y, int x)
             else if (y == 3 && x + i == game.ep_x) // En passant
             {
                 m.piece = 'E';
-                moves[moves_len++] = m;
+                if (move_is_safe(m))
+                {
+                    moves[moves_len++] = m;
+                }
             }
         }
     }
@@ -694,8 +696,6 @@ move_t alpha_beta(int depth, int beta, int alpha, move_t move)
     {
         int old_ep_x = game.ep_x;
         make_move(moves[i]);
-        log_move(moves[i]);
-        print_board(board, game);
         rotate_board();
         move_t return_move = alpha_beta(depth - 1, beta, alpha, moves[i]);
         rotate_board();
@@ -706,11 +706,9 @@ move_t alpha_beta(int depth, int beta, int alpha, move_t move)
 
 int main()
 {
-    initialise_board("8/5bk1/8/2Pp4/8/1K6/8/8 w - d6 0 1");
-    game.ep_x = 3;
+    initialise_board("r3k2r/1b4bq/8/8/8/8/7B/R3K2R w KQkq - 0 1");
     print_board(board, game);
-
-    int test_depth = 1;
+    int test_depth = 4;
     alpha_beta(test_depth, 0, 0, KINGSIDE_WHITE);
     for (int i = test_depth - 1; i >= 0; i--)
     {
