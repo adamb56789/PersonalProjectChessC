@@ -132,11 +132,16 @@ void make_move(move_t m)
     if (m.piece == '^') // Promotion
     {
         // default to queen
-        board[m.to_y][m.to_x] = m.promotion_piece == ' ' ? 'Q' : m.promotion_piece;
+        board[m.to_y][m.to_x] = m.involved_piece == ' ' ? 'Q' : m.involved_piece;
     }
     else if (m.piece == 'P' && m.from_y == 6 && m.to_y == 4) // pawn double move
     {
-        game.ep_x = 7 - m.from_y;
+        game.ep_x = 7 - m.from_y; // record en passant target
+    }
+    else if (m.piece == 'E') // en passant
+    {
+        board[m.to_y][m.to_x] = 'P';
+        board[m.from_y][m.to_x] = ' ';
     }
     else if (m.from_y == 7) // a lot of special things happen on the back rank
     {
@@ -216,6 +221,11 @@ void undo_move(move_t m)
     if (m.piece == '^') // Promotion
     {
         board[m.from_y][m.from_x] = 'P';
+    }
+    else if (m.piece == 'E') // en passant
+    {
+        board[m.from_y][m.from_x] = 'P';
+        board[m.from_y][m.to_x] = m.involved_piece;
     }
     else if (m.from_y == 7) // a lot of special things happen on the back rank
     {
@@ -397,14 +407,15 @@ bool move_is_safe(move_t m)
 
 void generate_pawn_moves(move_t *moves, int y, int x)
 {
-    if (y == 1) // Promotion
+    if (board[y - 1][x] == ' ')
     {
         // Move one forward
-        if (board[y - 1][x] == ' ')
+        move_t m ={ 'P', y, x, y - 1, x, board[y - 1][x] };
+        if (move_is_safe(m))
         {
-            move_t mq ={ '^', y, x, y - 1, x, board[y - 1][x], 'Q' };
-            if (move_is_safe(mq))
+            if (y == 1) // Promotion
             {
+                move_t mq ={ '^', y, x, y - 1, x, board[y - 1][x], 'Q' };
                 move_t mr ={ '^', y, x, y - 1, x, board[y - 1][x], 'R' };
                 move_t mb ={ '^', y, x, y - 1, x, board[y - 1][x], 'B' };
                 move_t mn ={ '^', y, x, y - 1, x, board[y - 1][x], 'N' };
@@ -413,16 +424,32 @@ void generate_pawn_moves(move_t *moves, int y, int x)
                 moves[moves_len++] = mb;
                 moves[moves_len++] = mn;
             }
-        }
-
-        // Diagonal capture
-        for (int i = -1; i <= 1; i += 2)
-        {
-            if (in_bounds(x + i))
+            else
             {
-                move_t mq ={ '^', y, x, y - 1, x + i, board[y - 1][x + i], 'Q' };
-                if (islower(board[y - 1][x + i]) && move_is_safe(mq))
+                moves[moves_len++] = m;
+            }
+        }
+        // Move two forward
+        // There used to be a try catch here on safeK, I don't think it was necessary
+        move_t m_2 ={ 'P', y, x, y - 2, x, board[y - 2][x] };
+        if (y == 6 && board[y - 2][x] == ' '
+            && move_is_safe(m_2))
+        {
+            moves[moves_len++] = m_2;
+        }
+    }
+
+    // Diagonal capture
+    for (int i = -1; i <= 1; i += 2)
+    {
+        if (in_bounds(x + i))
+        {
+            move_t m ={ 'P', y, x, y - 1, x + i, board[y - 1][x + i] };
+            if (islower(board[y - 1][x + i]) && move_is_safe(m))
+            {
+                if (y == 1) // Promotion
                 {
+                    move_t mq ={ '^', y, x, y - 1, x + i, board[y - 1][x + i], 'Q' };
                     move_t mr ={ '^', y, x, y - 1, x + i, board[y - 1][x + i], 'R' };
                     move_t mb ={ '^', y, x, y - 1, x + i, board[y - 1][x + i], 'B' };
                     move_t mn ={ '^', y, x, y - 1, x + i, board[y - 1][x + i], 'N' };
@@ -431,36 +458,7 @@ void generate_pawn_moves(move_t *moves, int y, int x)
                     moves[moves_len++] = mb;
                     moves[moves_len++] = mn;
                 }
-            }
-        }
-    }
-    else // Normal moves
-    {
-        // Move one forward
-        if (board[y - 1][x] == ' ')
-        {
-            move_t m ={ 'P', y, x, y - 1, x, board[y - 1][x] };
-            if (move_is_safe(m))
-            {
-                moves[moves_len++] = m;
-            }
-            // Move two forward
-            // There used to be a try catch here on safeK, I don't think it was necessary
-            move_t m_2 ={ 'P', y, x, y - 2, x, board[y - 2][x] };
-            if (y == 6 && board[y - 2][x] == ' '
-                && move_is_safe(m_2))
-            {
-                moves[moves_len++] = m_2;
-            }
-        }
-
-        // Diagonal capture
-        for (int i = -1; i <= 1; i += 2)
-        {
-            if (in_bounds(x + i))
-            {
-                move_t m ={ 'P', y, x, y - 1, x + i, board[y - 1][x + i] };
-                if (islower(board[y - 1][x + i]) && move_is_safe(m))
+                else
                 {
                     moves[moves_len++] = m;
                 }
@@ -630,7 +628,7 @@ move_t get_move_pieces(user_move_t user_m)
         user_m.to_y,
         user_m.to_x,
         board[user_m.to_y][user_m.to_x],
-        m.promotion_piece = user_m.promotion_piece };
+        m.involved_piece = user_m.promotion_piece };
 
     if (m.piece == 'P' && m.to_y == 0) // Promotion
     {
@@ -650,6 +648,7 @@ move_t get_move_pieces(user_move_t user_m)
     else if (m.piece == 'P' && m.from_y == 3 && abs(m.to_x - m.from_x) == 1 && m.target == ' ')
     {
         m.piece = 'E'; // En passant attempt
+        m.involved_piece = board[m.from_y][m.to_x]; // record the piece being captured
     }
     
     return m;
@@ -699,13 +698,13 @@ int main()
 {
     initialise_board(KIWIPETE);
 
-    alpha_beta(2, 0, 0, KINGSIDE_WHITE);
-    for (int i = 1; i >= 0; i--)
-    {
-        printf("%d  %d  %d  %d\n", nodes[i], captures[i], eps[i], castles[i]);
-    }
+    // alpha_beta(2, 0, 0, KINGSIDE_WHITE);
+    // for (int i = 1; i >= 0; i--)
+    // {
+    //     printf("%d  %d  %d  %d\n", nodes[i], captures[i], eps[i], castles[i]);
+    // }
     
-    return 0;
+    // return 0;
 
     char *settings = get_settings();
     puts(settings);
