@@ -141,7 +141,7 @@ void make_move(move_t m)
         board[m.to_y][m.to_x] = 'P';
         board[m.from_y][m.to_x] = ' ';
     }
-    else if (m.from_y == 7) // castling and castling conditions
+    else if (m.from_y == 7 || m.to_x == 7) // castling and castling conditions
     {
         if (m.piece == 'C') // Kingside castle
         {
@@ -178,7 +178,7 @@ void make_move(move_t m)
             }
         }
 
-        if (m.from_x == 0) // left rook movement
+        if (m.from_x == 0 || m.to_y == 7 && m.to_x == 0) // left rook movement or capture
         {
             if (game.turn == white)
             {
@@ -189,7 +189,7 @@ void make_move(move_t m)
                 game.kingside_r_stationary = false;
             }
         }
-        else if (m.from_x == 7) // right rook movement
+        else if (m.from_x == 7 ||  m.to_y == 7 && m.to_x == 7) // right rook movement or capture
         {
             if (game.turn == white)
             {
