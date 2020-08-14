@@ -29,9 +29,7 @@ typedef struct
     char to_y;
     char to_x;
     char target;
-    // a piece which is involved in the move without being the target
-    // used for promotion and capturing via en passant
-    char involved_piece;
+    char promotion_piece;
 } move_t;
 
 typedef struct

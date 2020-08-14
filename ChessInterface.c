@@ -49,7 +49,7 @@ char* to_chess_symbol_inverted_colour(char c)
     case 'P': return "\u265F"; break;
     case ' ': return " "; break;
     default:
-        printf("Cannot print '%c' which is not a valid piece", c);
+        printf("Cannot print '%x' which is not a valid piece", c);
         exit(EXIT_FAILURE);
         break;
     }

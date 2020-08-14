@@ -8,9 +8,8 @@
 #define swap_case(x) x = isupper(x) ? tolower(x) : toupper(x)
 
 /* TODO
-    en passant
-    threefold repetition
-    50 move rule
+    bug: en passant reveal-checking oneself is not prevented
+    stalemate rules except no valid moves
 */
 
 const char *NORMAL = "Normal";
@@ -40,7 +39,7 @@ char KIWIPETE[] =
 
 char board[8][8] = {};
 
-// ep_x (en passant target) is stored from the opposing side's perspective
+// ep_x (en passant target) is stored from the opposing side's perspective after making a move
 state_t game ={ white, false, false, false, false, false, false, -1 };
 
 
@@ -132,11 +131,11 @@ void make_move(move_t m)
     if (m.piece == '^') // Promotion
     {
         // default to queen
-        board[m.to_y][m.to_x] = m.involved_piece == ' ' ? 'Q' : m.involved_piece;
+        board[m.to_y][m.to_x] = m.promotion_piece == ' ' ? 'Q' : m.promotion_piece;
     }
     else if (m.piece == 'P' && m.from_y == 6 && m.to_y == 4) // pawn double move
     {
-        game.ep_x = 7 - m.from_y; // record en passant target
+        game.ep_x = 7 - m.from_x; // record en passant target
     }
     else if (m.piece == 'E') // en passant
     {
@@ -213,10 +212,11 @@ void make_move(move_t m)
     }
 }
 
-void undo_move(move_t m)
+void undo_move(move_t m, int old_ep_x)
 {
     board[m.from_y][m.from_x] = m.piece;
     board[m.to_y][m.to_x] = m.target;
+    game.ep_x = old_ep_x;
 
     if (m.piece == '^') // Promotion
     {
@@ -225,7 +225,7 @@ void undo_move(move_t m)
     else if (m.piece == 'E') // en passant
     {
         board[m.from_y][m.from_x] = 'P';
-        board[m.from_y][m.to_x] = m.involved_piece;
+        board[m.from_y][m.to_x] = 'p';
     }
     else if (m.from_y == 7) // a lot of special things happen on the back rank
     {
@@ -399,9 +399,10 @@ bool is_attacked_yx(int y, int x) // this makes things easier in generate_castli
 
 bool move_is_safe(move_t m)
 {
+    int old_ep_x = game.ep_x;
     make_move(m);
     bool safe = !is_attacked(get_my_king_location());
-    undo_move(m);
+    undo_move(m, old_ep_x);
     return safe;
 }
 
@@ -439,7 +440,7 @@ void generate_pawn_moves(move_t *moves, int y, int x)
         }
     }
 
-    // Diagonal capture
+    // Diagonal moves
     for (int i = -1; i <= 1; i += 2)
     {
         if (in_bounds(x + i))
@@ -462,6 +463,11 @@ void generate_pawn_moves(move_t *moves, int y, int x)
                 {
                     moves[moves_len++] = m;
                 }
+            }
+            else if (y == 3 && x + i == game.ep_x) // En passant
+            {
+                m.piece = 'E';
+                moves[moves_len++] = m;
             }
         }
     }
@@ -569,8 +575,8 @@ void generate_castling_moves(move_t *moves, int y, int x) // causes king to appe
     }
 }
 
-// moves_len which keeps track of the current location in the moves list
-// is global variable so it reduces function arguments
+// moves_len keeps track of the current location in the moves list
+// is global variable to reduce function arguments
 int generate_moves(move_t *moves)
 {
     moves_len = 0;
@@ -628,7 +634,7 @@ move_t get_move_pieces(user_move_t user_m)
         user_m.to_y,
         user_m.to_x,
         board[user_m.to_y][user_m.to_x],
-        m.involved_piece = user_m.promotion_piece };
+        m.promotion_piece = user_m.promotion_piece };
 
     if (m.piece == 'P' && m.to_y == 0) // Promotion
     {
@@ -648,7 +654,6 @@ move_t get_move_pieces(user_move_t user_m)
     else if (m.piece == 'P' && m.from_y == 3 && abs(m.to_x - m.from_x) == 1 && m.target == ' ')
     {
         m.piece = 'E'; // En passant attempt
-        m.involved_piece = board[m.from_y][m.to_x]; // record the piece being captured
     }
     
     return m;
@@ -670,6 +675,7 @@ move_t alpha_beta(int depth, int beta, int alpha, move_t move)
     if (move.piece == 'E')
     {
         eps[depth]++;
+        captures[depth]++;
     }
     if (toupper(move.piece) == 'C')
     {
@@ -686,25 +692,32 @@ move_t alpha_beta(int depth, int beta, int alpha, move_t move)
 
     for (int i = 0; i < number_of_moves; i++)
     {
+        int old_ep_x = game.ep_x;
         make_move(moves[i]);
+        log_move(moves[i]);
+        print_board(board, game);
         rotate_board();
         move_t return_move = alpha_beta(depth - 1, beta, alpha, moves[i]);
         rotate_board();
-        undo_move(moves[i]);
+        undo_move(moves[i], old_ep_x);
     }
+    return move;
 }
 
 int main()
 {
-    initialise_board(KIWIPETE);
+    initialise_board("8/5bk1/8/2Pp4/8/1K6/8/8 w - d6 0 1");
+    game.ep_x = 3;
+    print_board(board, game);
 
-    // alpha_beta(2, 0, 0, KINGSIDE_WHITE);
-    // for (int i = 1; i >= 0; i--)
-    // {
-    //     printf("%d  %d  %d  %d\n", nodes[i], captures[i], eps[i], castles[i]);
-    // }
+    int test_depth = 1;
+    alpha_beta(test_depth, 0, 0, KINGSIDE_WHITE);
+    for (int i = test_depth - 1; i >= 0; i--)
+    {
+        printf("%d  %d  %d  %d\n", nodes[i], captures[i], eps[i], castles[i]);
+    }
     
-    // return 0;
+    return 0;
 
     char *settings = get_settings();
     puts(settings);
