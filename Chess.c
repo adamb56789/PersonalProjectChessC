@@ -31,15 +31,17 @@ const move_t QUEENSIDE_WHITE ={ 'c', 7, 4, 7, 2, ' ' };
 const move_t KINGSIDE_BLACK ={ 'C', 7, 3, 7, 1, ' ' };
 const move_t QUEENSIDE_BLACK ={ 'c', 7, 3, 7, 5, ' ' };
 
-// char STARTING_POSITION[] =
-//     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 char STARTING_POSITION[] =
-    "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1";
+    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+// char STARTING_POSITION[] =
+//     "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1";
+char KIWIPETE[] = 
+    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ";
 
 char board[8][8] = {};
 
-// left_r and right_r are from black's perspective - right_r is on [0][0] below
-state_t game ={ white, false, false, false, false, false, false };
+// ep_x (en passant target) is stored from the opposing side's perspective
+state_t game ={ white, false, false, false, false, false, false, -1 };
 
 
 const int MAX_LIST_LENGTH = 255;
@@ -125,11 +127,16 @@ void make_move(move_t m)
 {
     board[m.from_y][m.from_x] = ' ';
     board[m.to_y][m.to_x] = m.piece;
+    game.ep_x = -1; // default to no en passant target
 
     if (m.piece == '^') // Promotion
     {
         // default to queen
         board[m.to_y][m.to_x] = m.promotion_piece == ' ' ? 'Q' : m.promotion_piece;
+    }
+    else if (m.piece == 'P' && m.from_y == 6 && m.to_y == 4) // pawn double move
+    {
+        game.ep_x = 7 - m.from_y;
     }
     else if (m.from_y == 7) // a lot of special things happen on the back rank
     {
@@ -299,11 +306,10 @@ pair get_my_king_location()
     }
 }
 
-bool is_in_check()
+bool is_attacked(pair square)
 {
-    pair king_location = get_my_king_location();
-    int ky = king_location.y;
-    int kx = king_location.x;
+    int ky = square.y;
+    int kx = square.x;
 
     // Pawn on left
     if (1 < ky // Simple y bounds check
@@ -375,10 +381,16 @@ bool is_in_check()
     return false;
 }
 
+bool is_attacked_yx(int y, int x) // this makes things easier in generate_castling
+{
+    pair p ={y, x};
+    return is_attacked(p);
+}
+
 bool move_is_safe(move_t m)
 {
     make_move(m);
-    bool safe = !is_in_check();
+    bool safe = !is_attacked(get_my_king_location());
     undo_move(m);
     return safe;
 }
@@ -512,12 +524,14 @@ void generate_linear_moves(move_t *moves, int y, int x, pair *directions, int di
 
 void generate_castling_moves(move_t *moves, int y, int x) // causes king to appear at spawnpoint
 {
+    pair king_square ={y, x};
     if (game.turn == white && game.K_stationary)
     {
         if (game.kingside_R_stationary
             && board[7][6] == ' '
             && board[7][5] == ' '
-            && !is_in_check()
+            && !is_attacked(king_square)
+            && !is_attacked_yx(7, 5) // no castling through attacked square
             && move_is_safe(KINGSIDE_WHITE))
         {
             moves[moves_len++] = KINGSIDE_WHITE;
@@ -526,7 +540,8 @@ void generate_castling_moves(move_t *moves, int y, int x) // causes king to appe
             && board[7][1] == ' '
             && board[7][2] == ' '
             && board[7][3] == ' '
-            && !is_in_check()
+            && !is_attacked(king_square)
+            && !is_attacked_yx(7, 4)
             && move_is_safe(QUEENSIDE_WHITE))
         {
             moves[moves_len++] = QUEENSIDE_WHITE;
@@ -538,7 +553,8 @@ void generate_castling_moves(move_t *moves, int y, int x) // causes king to appe
             && board[7][6] == ' '
             && board[7][5] == ' '
             && board[7][4] == ' '
-            && !is_in_check()
+            && !is_attacked(king_square)
+            && !is_attacked_yx(7, 4)
             && move_is_safe(QUEENSIDE_BLACK))
         {
             moves[moves_len++] = QUEENSIDE_BLACK;
@@ -546,7 +562,8 @@ void generate_castling_moves(move_t *moves, int y, int x) // causes king to appe
         if (game.kingside_r_stationary
             && board[7][1] == ' '
             && board[7][2] == ' '
-            && !is_in_check()
+            && !is_attacked(king_square)
+            && !is_attacked_yx(7, 2)
             && move_is_safe(KINGSIDE_BLACK))
         {
             moves[moves_len++] = KINGSIDE_BLACK;
@@ -619,7 +636,7 @@ move_t get_move_pieces(user_move_t user_m)
     {
         m.piece = '^';
     }
-    else if (m.piece == 'K' && m.from_y == 7) // Castling (could be illegal)
+    else if (m.piece == 'K' && m.from_y == 7) // Castling attempt
     {
         if (m.from_x == 4 && m.to_x == 6 || m.from_x == 3 && m.to_x == 1)
         {
@@ -630,12 +647,65 @@ move_t get_move_pieces(user_move_t user_m)
             m.piece = 'c'; // Queenside
         }
     }
+    else if (m.piece == 'P' && m.from_y == 3 && abs(m.to_x - m.from_x) == 1 && m.target == ' ')
+    {
+        m.piece = 'E'; // En passant attempt
+    }
+    
     return m;
+}
+
+int nodes[16];
+int captures[16];
+int eps[16];
+int castles[16];
+
+// Doesn't do any rating or searching yet, just makes a tree for debugging
+move_t alpha_beta(int depth, int beta, int alpha, move_t move)
+{
+    nodes[depth]++;
+    if (move.target != ' ')
+    {
+        captures[depth]++;
+    }
+    if (move.piece == 'E')
+    {
+        eps[depth]++;
+    }
+    if (toupper(move.piece) == 'C')
+    {
+        castles[depth]++;
+    }
+    
+    if (depth == 0)
+    {
+        return move;
+    }
+
+    move_t *moves = malloc(MAX_LIST_LENGTH * sizeof(move_t));
+    int number_of_moves = generate_moves(moves);
+
+    for (int i = 0; i < number_of_moves; i++)
+    {
+        make_move(moves[i]);
+        rotate_board();
+        move_t return_move = alpha_beta(depth - 1, beta, alpha, moves[i]);
+        rotate_board();
+        undo_move(moves[i]);
+    }
 }
 
 int main()
 {
-    initialise_board(STARTING_POSITION);
+    initialise_board(KIWIPETE);
+
+    alpha_beta(2, 0, 0, KINGSIDE_WHITE);
+    for (int i = 1; i >= 0; i--)
+    {
+        printf("%d  %d  %d  %d\n", nodes[i], captures[i], eps[i], castles[i]);
+    }
+    
+    return 0;
 
     char *settings = get_settings();
     puts(settings);
@@ -657,13 +727,14 @@ int main()
     // fclose(fopen(filename, "w"));
 
     // Difficulty setting
+    int max_depth;
     if (strcmp(settings, NORMAL) == 0)
     {
-        game.public_depth = 4;
+        max_depth = 4;
     }
     else if (strcmp(settings, EASY) == 0)
     {
-        game.public_depth = 0;
+        max_depth = 0;
     }
     else
     {
@@ -671,8 +742,6 @@ int main()
         exit(EXIT_FAILURE);
     }
     free(settings);
-
-    // list = malloc(MAX_LIST_LENGTH * sizeof(move_t));
 
     while (true)
     {
@@ -691,7 +760,7 @@ int main()
         int number_of_moves = generate_moves(moves);
         if (number_of_moves == 0)
         {
-            if (is_in_check())
+            if (is_attacked(get_my_king_location()))
             {
                 rotate_board();
                 print_board(board, game);

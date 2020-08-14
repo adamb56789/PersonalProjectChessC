@@ -18,7 +18,7 @@ typedef struct
     bool queenside_R_stationary;
     bool K_stationary;
     bool kingside_R_stationary;
-    int public_depth;
+    char ep_x;
 } state_t;
 
 typedef struct

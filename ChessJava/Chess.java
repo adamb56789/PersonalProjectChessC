@@ -736,11 +736,11 @@ public class Chess {
             
             if (player==0) {
                 if (value<=beta) {
-                beta=value;
-                if (depth==publicDepth) {
-                    move=returnString.substring(0,8);
+                    beta=value;
+                    if (depth==publicDepth) {
+                        move=returnString.substring(0,8);
+                    }
                 }
-            }
             } else {
                 if (value>alpha) {
                     alpha=value;
