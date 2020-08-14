@@ -72,7 +72,7 @@ move_t to_move(char board[8][8], int from_y, int from_x, int to_y, int to_x)
     return move;
 }
 
-void print_board(char board[8][8], state_t game)
+void print_board(char board[8][8], state_t state)
 {
     puts(LETTERLINE);
     puts(TOPLINE);
@@ -81,7 +81,7 @@ void print_board(char board[8][8], state_t game)
         printf("%d \u2502", 8 - i);
         for (size_t j = 0; j < 8; j++)
         {
-            if (game.turn == white)
+            if (state.turn == white)
             {
                 // Colours are inverted since on a black background,
                 // the black pieces appear as solid white
