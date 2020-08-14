@@ -43,8 +43,7 @@ state_t game ={ white, false, false, false, false, false, false };
 
 
 const int MAX_LIST_LENGTH = 255;
-move_t *list;
-int list_length;
+int moves_len;
 
 void rotate_board() // swaps piece colour as well as move pieces
 {
@@ -384,7 +383,7 @@ bool move_is_safe(move_t m)
     return safe;
 }
 
-void generate_pawn_moves(int y, int x)
+void generate_pawn_moves(move_t *moves, int y, int x)
 {
     if (y == 1) // Promotion
     {
@@ -397,10 +396,10 @@ void generate_pawn_moves(int y, int x)
                 move_t mr ={ '^', y, x, y - 1, x, board[y - 1][x], 'R' };
                 move_t mb ={ '^', y, x, y - 1, x, board[y - 1][x], 'B' };
                 move_t mn ={ '^', y, x, y - 1, x, board[y - 1][x], 'N' };
-                list[list_length++] = mq;
-                list[list_length++] = mr;
-                list[list_length++] = mb;
-                list[list_length++] = mn;
+                moves[moves_len++] = mq;
+                moves[moves_len++] = mr;
+                moves[moves_len++] = mb;
+                moves[moves_len++] = mn;
             }
         }
 
@@ -415,10 +414,10 @@ void generate_pawn_moves(int y, int x)
                     move_t mr ={ '^', y, x, y - 1, x + i, board[y - 1][x + i], 'R' };
                     move_t mb ={ '^', y, x, y - 1, x + i, board[y - 1][x + i], 'B' };
                     move_t mn ={ '^', y, x, y - 1, x + i, board[y - 1][x + i], 'N' };
-                    list[list_length++] = mq;
-                    list[list_length++] = mr;
-                    list[list_length++] = mb;
-                    list[list_length++] = mn;
+                    moves[moves_len++] = mq;
+                    moves[moves_len++] = mr;
+                    moves[moves_len++] = mb;
+                    moves[moves_len++] = mn;
                 }
             }
         }
@@ -431,7 +430,7 @@ void generate_pawn_moves(int y, int x)
             move_t m ={ 'P', y, x, y - 1, x, board[y - 1][x] };
             if (move_is_safe(m))
             {
-                list[list_length++] = m;
+                moves[moves_len++] = m;
             }
             // Move two forward
             // There used to be a try catch here on safeK, I don't think it was necessary
@@ -439,7 +438,7 @@ void generate_pawn_moves(int y, int x)
             if (y == 6 && board[y - 2][x] == ' '
                 && move_is_safe(m_2))
             {
-                list[list_length++] = m_2;
+                moves[moves_len++] = m_2;
             }
         }
 
@@ -451,14 +450,14 @@ void generate_pawn_moves(int y, int x)
                 move_t m ={ 'P', y, x, y - 1, x + i, board[y - 1][x + i] };
                 if (islower(board[y - 1][x + i]) && move_is_safe(m))
                 {
-                    list[list_length++] = m;
+                    moves[moves_len++] = m;
                 }
             }
         }
     }
 }
 
-void generate_jumping_moves(int y, int x, pair *jumps, int jumps_length)
+void generate_jumping_moves(move_t *moves, int y, int x, pair *jumps, int jumps_length)
 {
     for (int i = 0; i < jumps_length; i++)
     {
@@ -471,13 +470,13 @@ void generate_jumping_moves(int y, int x, pair *jumps, int jumps_length)
             move_t m ={ board[y][x], y, x, ny, nx, board[ny][nx] };
             if (!isupper(board[ny][nx]) && move_is_safe(m))
             {
-                list[list_length++] = m;
+                moves[moves_len++] = m;
             }
         }
     }
 }
 
-void generate_linear_moves(int y, int x, pair *directions, int directions_length)
+void generate_linear_moves(move_t *moves, int y, int x, pair *directions, int directions_length)
 {
     for (int i = 0; i < directions_length; i++)
     {
@@ -497,7 +496,7 @@ void generate_linear_moves(int y, int x, pair *directions, int directions_length
                 move_t m ={ board[y][x], y, x, ny, nx, board[ny][nx] };
                 if (!isupper(board[ny][nx]) && move_is_safe(m))
                 {
-                    list[list_length++] = m;
+                    moves[moves_len++] = m;
                 }
             }
             
@@ -511,7 +510,7 @@ void generate_linear_moves(int y, int x, pair *directions, int directions_length
     }
 }
 
-void generate_castling_moves(int y, int x) // causes king to appear at spawnpoint
+void generate_castling_moves(move_t *moves, int y, int x) // causes king to appear at spawnpoint
 {
     if (game.turn == white && game.K_stationary)
     {
@@ -521,7 +520,7 @@ void generate_castling_moves(int y, int x) // causes king to appear at spawnpoin
             && !is_in_check()
             && move_is_safe(KINGSIDE_WHITE))
         {
-            list[list_length++] = KINGSIDE_WHITE;
+            moves[moves_len++] = KINGSIDE_WHITE;
         }
         if (game.queenside_R_stationary
             && board[7][1] == ' '
@@ -530,7 +529,7 @@ void generate_castling_moves(int y, int x) // causes king to appear at spawnpoin
             && !is_in_check()
             && move_is_safe(QUEENSIDE_WHITE))
         {
-            list[list_length++] = QUEENSIDE_WHITE;
+            moves[moves_len++] = QUEENSIDE_WHITE;
         }
     }
     else if (game.turn == black && game.k_stationary)
@@ -542,7 +541,7 @@ void generate_castling_moves(int y, int x) // causes king to appear at spawnpoin
             && !is_in_check()
             && move_is_safe(QUEENSIDE_BLACK))
         {
-            list[list_length++] = QUEENSIDE_BLACK;
+            moves[moves_len++] = QUEENSIDE_BLACK;
         }
         if (game.kingside_r_stationary
             && board[7][1] == ' '
@@ -550,54 +549,54 @@ void generate_castling_moves(int y, int x) // causes king to appear at spawnpoin
             && !is_in_check()
             && move_is_safe(KINGSIDE_BLACK))
         {
-            list[list_length++] = KINGSIDE_BLACK;
+            moves[moves_len++] = KINGSIDE_BLACK;
         }
     }
 }
 
-void generate_moves()
+// moves_len which keeps track of the current location in the moves list
+// is global variable so it reduces function arguments
+int generate_moves(move_t *moves)
 {
-    list_length = 0;
+    moves_len = 0;
     for (int y = 0; y < 8; y++)
     {
         for (int x = 0; x < 8; x++)
         {
             switch (board[y][x])
             {
-            case 'P': generate_pawn_moves(y, x);
+            case 'P': generate_pawn_moves(moves, y, x);
                 break;
-            case 'N': generate_jumping_moves(y, x, KNIGHT_JUMPS, 8);
+            case 'N': generate_jumping_moves(moves, y, x, KNIGHT_JUMPS, 8);
                 break;
-            case 'B': generate_linear_moves(y, x, BISHOP_DIRECTIONS, 4);
+            case 'B': generate_linear_moves(moves, y, x, BISHOP_DIRECTIONS, 4);
                 break;
-            case 'R': generate_linear_moves(y, x, ROOK_DIRECTIONS, 4);
+            case 'R': generate_linear_moves(moves, y, x, ROOK_DIRECTIONS, 4);
                 break;
-            case 'Q': generate_linear_moves(y, x, QUEEN_DIRECTIONS, 8);
+            case 'Q': generate_linear_moves(moves, y, x, QUEEN_DIRECTIONS, 8);
                 break;
             case 'K':
-                generate_jumping_moves(y, x, KING_JUMPS, 8);
-                generate_castling_moves(y, x);
+                generate_jumping_moves(moves, y, x, KING_JUMPS, 8);
+                generate_castling_moves(moves, y, x);
                 break;
             }
         }
     }
-    // for (int i = 0; i < list_length; i++)
-    // {
-    //     log_move(list[i]);
-    // }
+    return moves_len;
 }
 
 bool is_legal_move(move_t m)
 {
-    generate_moves();
-    for (int i = 0; i < list_length; i++)
+    move_t *moves = malloc(MAX_LIST_LENGTH * sizeof(move_t));
+    int number_of_moves = generate_moves(moves);
+    for (int i = 0; i < number_of_moves; i++)
     {
         // this doesn't need to check for promotion piece
         // as that can never affect legality
-        if (m.from_y == list[i].from_y
-            && m.from_x == list[i].from_x
-            && m.to_y == list[i].to_y
-            && m.to_x == list[i].to_x)
+        if (m.from_y == moves[i].from_y
+            && m.from_x == moves[i].from_x
+            && m.to_y == moves[i].to_y
+            && m.to_x == moves[i].to_x)
         {
             return true;
         }
@@ -673,7 +672,7 @@ int main()
     }
     free(settings);
 
-    list = malloc(MAX_LIST_LENGTH * sizeof(move_t));
+    // list = malloc(MAX_LIST_LENGTH * sizeof(move_t));
 
     while (true)
     {
@@ -688,8 +687,9 @@ int main()
         make_move(move);
         rotate_board();
 
-        generate_moves();
-        if (list_length == 0)
+        move_t *moves = malloc(MAX_LIST_LENGTH * sizeof(move_t));
+        int number_of_moves = generate_moves(moves);
+        if (number_of_moves == 0)
         {
             if (is_in_check())
             {

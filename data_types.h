@@ -34,6 +34,13 @@ typedef struct
 
 typedef struct
 {
+    move_t move;
+    int value;
+} move_value_t;
+
+
+typedef struct
+{
     char from_y;
     char from_x;
     char to_y;
