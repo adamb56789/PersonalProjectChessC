@@ -24,6 +24,7 @@ pair BISHOP_DIRECTIONS[4] ={ -1, -1, -1, 1, 1, -1, 1, 1 };
 pair ROOK_DIRECTIONS[4] ={ -1, 0, 0, -1, 0, 1, 1, 0 };
 pair QUEEN_DIRECTIONS[8] ={ -1, -1, -1, 0, -1, 1, 0, -1, 0, 1, 1, -1, 1, 0, 1, 1 };
 
+const move_t BLANK_MOVE ={0, 0, 0, 0, 0, 0};
 const move_t KINGSIDE_WHITE ={ 'C', 7, 4, 7, 6, ' ' };
 const move_t QUEENSIDE_WHITE ={ 'c', 7, 4, 7, 2, ' ' };
 const move_t KINGSIDE_BLACK ={ 'C', 7, 3, 7, 1, ' ' };
@@ -66,6 +67,9 @@ void rotate_board() // swaps piece colour as well as move pieces
 void initialise_board(char *fen)
 {
     memset(board, ' ', 64);
+    state_t new_state = { white, false, false, false, false, false, false, -1 };
+    state = new_state;
+    
     int i = 0;
     int y = 0;
     int x = 0;
@@ -652,11 +656,6 @@ move_t get_move_pieces(user_move_t user_m)
     return m;
 }
 
-int nodes[16];
-int captures[16];
-int eps[16];
-int castles[16];
-
 bool is_move_equal(move_t a, move_t b)
 {
     return a.piece == b.piece
@@ -668,8 +667,34 @@ bool is_move_equal(move_t a, move_t b)
         && a.promotion_piece == b.promotion_piece;
 }
 
-// Doesn't do any rating or searching yet, just makes a tree for debugging
+int nodes[16];
+int captures[16];
+int eps[16];
+int castles[16];
+
 move_t alpha_beta(int depth, int beta, int alpha, move_t move)
+{
+    if (depth == 0)
+    {
+        return move;
+    }
+
+    move_t *moves = malloc(MAX_LIST_LENGTH * sizeof(move_t));
+    int number_of_moves = generate_moves(moves);
+
+    for (int i = 0; i < number_of_moves; i++)
+    {
+        state_t old_state = state;
+        make_move(moves[i]);
+        rotate_board();
+        move_t return_move = alpha_beta(depth - 1, beta, alpha, moves[i]);
+        rotate_board();
+        undo_move(moves[i], old_state);
+    }
+    return move;
+}
+
+move_t perft(int depth, move_t move)
 {
     nodes[depth]++;
     if (move.target != ' ')
@@ -704,40 +729,102 @@ move_t alpha_beta(int depth, int beta, int alpha, move_t move)
         //     log_move(move);
         // }
         
-        char old_board[8][8]; // DEBUG
-        memcpy(old_board, board, 64); // DEBUG
+        // char old_board[8][8]; // DEBUG
+        // memcpy(old_board, board, 64); // DEBUG
         state_t old_state = state;
         make_move(moves[i]);
         rotate_board();
-        move_t return_move = alpha_beta(depth - 1, beta, alpha, moves[i]);
+        move_t return_move = perft(depth - 1, moves[i]);
         rotate_board();
         undo_move(moves[i], old_state);
 
-        if (memcmp(board, old_board, 64) != 0)
-        {
-            puts("Old board:");
-            print_board(old_board, old_state);
-            puts("New board:");
-            print_board(board, state);
-            printf("ERROR: board not identical after undo\n turn = %d depth = %d move = ", state.turn, depth);
-            log_move(moves[i]);
-            printf("Previous move: ");
-            log_move(move);
-            exit(EXIT_FAILURE);
-        }
+        // if (memcmp(board, old_board, 64) != 0)
+        // {
+        //     puts("Old board:");
+        //     print_board(old_board, old_state);
+        //     puts("New board:");
+        //     print_board(board, state);
+        //     printf("ERROR: board not identical after undo\n turn = %d depth = %d move = ", state.turn, depth);
+        //     log_move(moves[i]);
+        //     printf("Previous move: ");
+        //     log_move(move);
+        //     exit(EXIT_FAILURE);
+        // }
     }
     return move;
 }
 
+void run_tests()
+{
+    char *tests[26];
+    int test_depths[26] ={6, 6, 6, 6, 6, 6, 6, 6, 4, 4, 4, 4, 6, 6, 5, 5, 6, 6, 6, 6, 6, 6, 7, 7, 4, 4};
+    // avoid illegal en passant capture: pass
+    tests[0] = "8/5bk1/8/2Pp4/8/1K6/8/8 w - d6 0 1"; // 6 = 824064
+    tests[1] = "8/8/1k6/8/2pP4/8/5BK1/8 b - d3 0 1"; // 6 = 824064
+    // en passant capture checks opponent: pass
+    tests[2] = "8/8/1k6/2b5/2pP4/8/5K2/8 b - d3 0 1"; // 6 = 1440467
+    tests[3] = "8/5k2/8/2Pp4/2B5/1K6/8/8 w - d6 0 1"; // 6 = 1440467
+    // "short castling gives check: pass
+    tests[4] = "5k2/8/8/8/8/8/8/4K2R w K - 0 1"; // 6 = 661072
+    tests[5] = "4k2r/8/8/8/8/8/8/5K2 b k - 0 1"; // 6 = 661072
+    // long castling gives check: pass
+    tests[6] = "3k4/8/8/8/8/8/8/R3K3 w Q - 0 1"; // 6 = 803711
+    tests[7] = "r3k3/8/8/8/8/8/8/3K4 b q - 0 1"; // 6 = 803711
+    // castling (including losing cr due to rook capture): fail 1276227/1279475
+    tests[8] = "r3k2r/1b4bq/8/8/8/8/7B/R3K2R w KQkq - 0 1"; // 4 = 1274206
+    tests[9] = "r3k2r/7b/8/8/8/8/1B4BQ/R3K2R b KQkq - 0 1"; // 4 = 1274206
+    // castling prevented: fail 1767973/1794101
+    tests[10] = "r3k2r/8/3Q4/8/8/5q2/8/R3K2R b KQkq - 0 1"; // 4 = 1720476
+    tests[11] = "r3k2r/8/5Q2/8/8/3q4/8/R3K2R w KQkq - 0 1"; // 4 = 1720476
+    // promote out of check: pass
+    tests[12] = "2K2r2/4P3/8/8/8/8/8/3k4 w - - 0 1"; // 6 = 3821001
+    tests[13] = "3K4/8/8/8/8/8/4p3/2k2R2 b - - 0 1"; // 6 = 3821001
+    // discovered check: pass
+    tests[14] = "8/8/1P2K3/8/2n5/1q6/8/5k2 b - - 0 1"; // 5 = 1004658
+    tests[15] = "5K2/8/1Q6/2N5/8/1p2k3/8/8 w - - 0 1"; // 5 = 1004658
+    // promote to give check: pass
+    tests[16] = "4k3/1P6/8/8/8/8/K7/8 w - - 0 1"; // 6 = 217342
+    tests[17] = "8/k7/8/8/8/8/1p6/4K3 b - - 0 1"; // 6 = 217342
+    // underpromote to check: pass
+    tests[18] = "8/P1k5/K7/8/8/8/8/8 w - - 0 1"; // 6 = 92683
+    tests[19] = "8/8/8/8/8/k7/p1K5/8 b - - 0 1"; // 6 = 92683
+    // self stalemate: pass
+    tests[20] = "K1k5/8/P7/8/8/8/8/8 w - - 0 1"; // 6 = 2217
+    tests[21] = "8/8/8/8/8/p7/8/k1K5 b - - 0 1"; // 6 = 2217
+    // stalemate/checkmate: pass
+    tests[22] = "8/k1P5/8/1K6/8/8/8/8 w - - 0 1"; // 7 = 567584
+    tests[23] = "8/8/8/8/1k6/8/K1p5/8 b - - 0 1"; // 7 = 567584
+    // double check: pass
+    tests[24] = "8/8/2k5/5q2/5n2/8/5K2/8 b - - 0 1"; // 4 = 23527
+    tests[25] = "8/5k2/8/5N2/5Q2/2K5/8/8 w - - 0 1"; // 4 = 23527
+
+    for (int i = 0; i < 26; i++)
+    {
+        printf("Test %d, depth %d, %s\n", i, test_depths[i], tests[i]);
+        initialise_board(tests[i]);
+        if (i == 0 || i == 3)
+        {
+            state.ep_x = 3;
+        }
+        else if (i == 1 || i == 2)
+        {
+            state.ep_x = 4;
+        }
+        memset(nodes, 0, 16);
+        memset(captures, 0, 16);
+        memset(eps, 0, 16);
+        memset(castles, 0, 16);
+        perft(test_depths[i], KINGSIDE_WHITE);
+        printf("%d  %d  %d  %d\n", nodes[0], captures[0], eps[0], castles[0]);
+    }
+}
+
 int main()
 {
-    // fail - avoid illegal en passant capture
-    // fail - castling (including losing cr due to rook capture)
-    //  - promote out of check
-    initialise_board("2K2r2/4P3/8/8/8/8/8/3k4 w - - 0 1");
+    initialise_board("r3k2r/p6p/8/B7/1pp1p3/3b4/P6P/R3K2R w KQkq -");
     print_board(board, state);
-    int test_depth = 6;
-    alpha_beta(test_depth, 0, 0, KINGSIDE_WHITE);
+    int test_depth = 5;
+    perft(test_depth, BLANK_MOVE);
     for (int i = test_depth - 1; i >= 0; i--)
     {
         printf("%d  %d  %d  %d\n", nodes[i], captures[i], eps[i], castles[i]);
