@@ -40,11 +40,20 @@ char KIWIPETE[] =
 char board[8][8] = {};
 
 // ep_x (en passant target) is stored from the opposing side's perspective after making a move
-state_t state ={ white, false, false, false, false, false, false, -1 };
+state_t state ={ white, false, false, false, false, -1 };
 
 
 const int MAX_LIST_LENGTH = 255;
 int moves_len;
+
+move_t rotate_move(move_t m)
+{
+    m.from_x = 7 - m.from_x;
+    m.from_y = 7 - m.from_y;
+    m.to_x = 7 - m.to_x;
+    m.to_y = 7 - m.to_y;
+    return m;
+}
 
 void rotate_board() // swaps piece colour as well as move pieces
 {
@@ -67,13 +76,12 @@ void rotate_board() // swaps piece colour as well as move pieces
 void initialise_board(char *fen)
 {
     memset(board, ' ', 64);
-    state_t new_state = { white, false, false, false, false, false, false, -1 };
+    state_t new_state = { white, false, false, false, false, -1 };
     state = new_state;
     
     int i = 0;
     int y = 0;
     int x = 0;
-    bool play_as_black = false;
     while (fen[i] != ' ')
     {
         if (fen[i] == '/')
@@ -92,27 +100,23 @@ void initialise_board(char *fen)
         i++;
     }
     i++;
-    play_as_black = fen[i] == 'b';
+    bool play_as_black = fen[i] == 'b';
     i += 2;
     while (fen[i] != ' ')
     {
         switch (fen[i])
         {
         case 'K':
-            state.K_stationary = true;
-            state.kingside_R_stationary = true;
+            state.can_castle_K = true;
             break;
         case 'Q':
-            state.K_stationary = true;
-            state.queenside_R_stationary = true;
+            state.can_castle_Q = true;
             break;
         case 'k':
-            state.k_stationary = true;
-            state.kingside_r_stationary = true;
+            state.can_castle_k = true;
             break;
         case 'q':
-            state.k_stationary = true;
-            state.queenside_r_stationary = true;
+            state.can_castle_q = true;
             break;
         default:
             break;
@@ -145,97 +149,105 @@ void make_move(move_t m)
         board[m.to_y][m.to_x] = 'P';
         board[m.from_y][m.to_x] = ' ';
     }
-    else if (m.from_y == 7) // castling and castling conditions
+    else if (m.piece == 'C') // Kingside castle
     {
-        if (m.piece == 'C') // Kingside castle
+        if (state.turn == white)
         {
-            if (m.from_x == 4) // White
+            board[7][7] = ' '; // move the rook as well
+            board[7][6] = 'K';
+            board[7][5] = 'R';
+            state.can_castle_K = false;
+            state.can_castle_Q = false;
+        }
+        else
+        {
+            board[7][0] = ' ';
+            board[7][1] = 'K';
+            board[7][2] = 'R';
+            state.can_castle_k = false;
+            state.can_castle_q = false;
+        }
+    }
+    else if (m.piece == 'c') // Queenside castle
+    {
+        if (state.turn == white) // White
+        {
+            board[7][0] = ' ';
+            board[7][2] = 'K';
+            board[7][3] = 'R';
+            state.can_castle_K = false;
+            state.can_castle_Q = false;
+        }
+        else // Black
+        {
+            board[7][7] = ' ';
+            board[7][5] = 'K';
+            board[7][4] = 'R';
+            state.can_castle_k = false;
+            state.can_castle_q = false;
+        }
+    }
+    else if (m.piece == 'R') // rook movement
+    {
+        if (state.turn == white)
+        {
+            if (m.from_x == 7)
             {
-                board[7][7] = ' '; // move the rook as well
-                board[7][6] = 'K';
-                board[7][5] = 'R';
-                state.kingside_R_stationary = false;
+                state.can_castle_K = false;
             }
-            else // Black
+            else if (m.from_x == 0)
             {
-                board[7][0] = ' ';
-                board[7][1] = 'K';
-                board[7][2] = 'R';
-                state.kingside_r_stationary = false;
+                state.can_castle_Q = false;
             }
         }
-        else if (m.piece == 'c') // Queenside castle
+        else
         {
-            if (m.from_x == 4) // White
+            if (m.from_x == 7)
             {
-                board[7][0] = ' ';
-                board[7][2] = 'K';
-                board[7][3] = 'R';
-                state.queenside_R_stationary = false;
+                state.can_castle_q = false;
             }
-            else // Black
+            else if (m.from_x == 0)
             {
-                board[7][7] = ' ';
-                board[7][5] = 'K';
-                board[7][4] = 'R';
-                state.queenside_r_stationary = false;
+                state.can_castle_k = false;
             }
         }
-
-        if (m.from_x == 0) // left rook movement
+    }
+    else if (m.piece == 'K') // King moves
+    {
+        if (state.turn == white)
         {
-            if (state.turn == white)
-            {
-                state.queenside_R_stationary = false;
-            }
-            else
-            {
-                state.kingside_r_stationary = false;
-            }
+            state.can_castle_K = false;
+            state.can_castle_Q = false;
         }
-        else if (m.from_x == 7) // right rook movement
+        else
         {
-            if (state.turn == white)
-            {
-                state.kingside_R_stationary = false;
-            }
-            else
-            {
-                state.queenside_r_stationary = false;
-            }
-        }
-        else if (state.turn == white && m.from_x == 4) // white king movement
-        {
-            state.K_stationary = false;
-        }
-        else if (state.turn == black && m.from_x == 3) // black king movement
-        {
-            state.k_stationary = false;
+            state.can_castle_k = false;
+            state.can_castle_q = false;
         }
     }
 
-    if (m.target == 'r') // rook capture castling conditions
+    if (m.target == 'r' && m.to_y == 0) // capture enemy rook
     {
-        if (m.to_y == 0 && m.to_x == 0) // enemy's right rook capture
+        if (state.turn == white)
         {
-            if (state.turn == white)
+            if (m.to_x == 7)
             {
-                state.queenside_r_stationary = false;
+                state.can_castle_k = false;
             }
-            else
+            else if (m.to_x == 0)
             {
-                state.kingside_R_stationary = false;
+                state.can_castle_q = false;
             }
         }
-        else if (m.to_y == 0 && m.to_x == 7) // enemy's left rook capture
+        else
         {
-            if (state.turn == white)
+            if (m.to_x == 7)
             {
-                state.kingside_r_stationary = false;
+                state.can_castle_Q = false;
             }
-            else
+            else if (m.to_x == 0)
             {
-                state.queenside_R_stationary = false;
+                state.can_castle_K = false;
             }
         }
     }
@@ -297,17 +309,28 @@ void undo_move(move_t m, state_t old_state)
 
 pair get_my_king_location()
 {
+    int n = 0;
+    pair location;
     for (int y = 0; y < 8; y++)
     {
         for (int x = 0; x < 8; x++)
         {
             if (board[y][x] == 'K')
             {
-                pair location ={y, x};
-                return location;
+                pair temp ={y, x};
+                location = temp;
+                n++;
             }
         }
     }
+    // TODO remove debug
+    if (n != 1)
+    {
+        print_board(board, state);
+        printf("ERROR: there are %d kings!", n);
+        exit(EXIT_FAILURE);
+    }
+    return location;
 }
 
 bool is_attacked(pair square)
@@ -526,44 +549,44 @@ void generate_linear_moves(move_t *moves, int y, int x, pair *directions, int di
 void generate_castling_moves(move_t *moves, int y, int x) // causes king to appear at spawnpoint
 {
     pair king_square ={y, x};
-    if (state.turn == white && state.K_stationary)
+    if (state.turn == white)
     {
-        if (state.kingside_R_stationary
+        if (state.can_castle_K
             && board[7][6] == ' '
             && board[7][5] == ' '
-            && !is_attacked(king_square)
+            && !is_attacked_yx(y, x)
             && !is_attacked_yx(7, 5) // no castling through attacked square
             && move_is_safe(KINGSIDE_WHITE))
         {
             moves[moves_len++] = KINGSIDE_WHITE;
         }
-        if (state.queenside_R_stationary
+        if (state.can_castle_Q
             && board[7][1] == ' '
             && board[7][2] == ' '
             && board[7][3] == ' '
-            && !is_attacked(king_square)
-            && !is_attacked_yx(7, 4)
+            && !is_attacked_yx(y, x)
+            && !is_attacked_yx(7, 3)
             && move_is_safe(QUEENSIDE_WHITE))
         {
             moves[moves_len++] = QUEENSIDE_WHITE;
         }
     }
-    else if (state.turn == black && state.k_stationary)
+    else if (state.turn == black)
     {
-        if (state.queenside_r_stationary
+        if (state.can_castle_q
             && board[7][6] == ' '
             && board[7][5] == ' '
             && board[7][4] == ' '
-            && !is_attacked(king_square)
+            && !is_attacked_yx(y, x)
             && !is_attacked_yx(7, 4)
             && move_is_safe(QUEENSIDE_BLACK))
         {
             moves[moves_len++] = QUEENSIDE_BLACK;
         }
-        if (state.kingside_r_stationary
+        if (state.can_castle_k
             && board[7][1] == ' '
             && board[7][2] == ' '
-            && !is_attacked(king_square)
+            && !is_attacked_yx(y, x)
             && !is_attacked_yx(7, 2)
             && move_is_safe(KINGSIDE_BLACK))
         {
@@ -667,11 +690,6 @@ bool is_move_equal(move_t a, move_t b)
         && a.promotion_piece == b.promotion_piece;
 }
 
-int nodes[16];
-int captures[16];
-int eps[16];
-int castles[16];
-
 move_t alpha_beta(int depth, int beta, int alpha, move_t move)
 {
     if (depth == 0)
@@ -694,49 +712,56 @@ move_t alpha_beta(int depth, int beta, int alpha, move_t move)
     return move;
 }
 
-move_t perft(int depth, move_t move)
+long perft(int depth, int max_depth)
 {
-    nodes[depth]++;
-    if (move.target != ' ')
-    {
-        captures[depth]++;
-    }
-    if (move.piece == 'E')
-    {
-        eps[depth]++;
-        captures[depth]++;
-    }
-    if (toupper(move.piece) == 'C')
-    {
-        castles[depth]++;
-    }
-    
     if (depth == 0)
     {
-        return move;
+        return 1;
     }
 
     move_t *moves = malloc(MAX_LIST_LENGTH * sizeof(move_t));
     int number_of_moves = generate_moves(moves);
 
+    long count = 0;
     for (int i = 0; i < number_of_moves; i++)
     {
-        // move_t m ={'B', 6, 6, 7, 7, 'r'};
-        // if (state.turn == black && is_move_equal(moves[i], m))
+        // move_t m ={'B', 3, 0, 2, 1, ' '};
+        // if (state.turn == black && is_move_equal(last_move, m))
         // {
         //     print_board(board, state);
         //     printf("turn = %d depth = %d ", state.turn, depth);
-        //     log_move(move);
+        //     log_move(rotate_move(moves[i]));
+        // }
+        // for (int i = 0; i < max_depth - depth; i++)
+        // {
+        //     printf("    ");
+        // }
+        // if (state.turn == white)
+        // {
+        //     log_move(moves[i]);
+        // }
+        // else
+        // {
+        //     log_move(rotate_move(moves[i]));
         // }
         
-        // char old_board[8][8]; // DEBUG
-        // memcpy(old_board, board, 64); // DEBUG
+        // char old_board[8][8];
+        // memcpy(old_board, board, 64);
+        long old_count = count;
+
         state_t old_state = state;
         make_move(moves[i]);
         rotate_board();
-        move_t return_move = perft(depth - 1, moves[i]);
+        count += perft(depth - 1, max_depth);
         rotate_board();
         undo_move(moves[i], old_state);
+
+        // if (depth == max_depth)
+        // {
+        //     // Divide
+        //     printf("%d ", count - old_count);
+        //     log_move(moves[i]);
+        // }
 
         // if (memcmp(board, old_board, 64) != 0)
         // {
@@ -746,18 +771,17 @@ move_t perft(int depth, move_t move)
         //     print_board(board, state);
         //     printf("ERROR: board not identical after undo\n turn = %d depth = %d move = ", state.turn, depth);
         //     log_move(moves[i]);
-        //     printf("Previous move: ");
-        //     log_move(move);
         //     exit(EXIT_FAILURE);
         // }
     }
-    return move;
+    return count;
 }
 
 void run_tests()
 {
     char *tests[26];
-    int test_depths[26] ={6, 6, 6, 6, 6, 6, 6, 6, 4, 4, 4, 4, 6, 6, 5, 5, 6, 6, 6, 6, 6, 6, 7, 7, 4, 4};
+    int test_depths[13] ={6, 6, 6, 6, 4, 4, 6, 5, 6, 6, 6, 7, 4};
+    long correct_result[13] ={824064, 1440467, 661072, 803711, 1274206, 1720476, 3821001, 1004658, 217342, 92683, 2217, 567584, 23527};
     // avoid illegal en passant capture: pass
     tests[0] = "8/5bk1/8/2Pp4/8/1K6/8/8 w - d6 0 1"; // 6 = 824064
     tests[1] = "8/8/1k6/8/2pP4/8/5BK1/8 b - d3 0 1"; // 6 = 824064
@@ -770,10 +794,10 @@ void run_tests()
     // long castling gives check: pass
     tests[6] = "3k4/8/8/8/8/8/8/R3K3 w Q - 0 1"; // 6 = 803711
     tests[7] = "r3k3/8/8/8/8/8/8/3K4 b q - 0 1"; // 6 = 803711
-    // castling (including losing cr due to rook capture): fail 1276227/1279475
+    // castling (including losing cr due to rook capture): pass
     tests[8] = "r3k2r/1b4bq/8/8/8/8/7B/R3K2R w KQkq - 0 1"; // 4 = 1274206
     tests[9] = "r3k2r/7b/8/8/8/8/1B4BQ/R3K2R b KQkq - 0 1"; // 4 = 1274206
-    // castling prevented: fail 1767973/1794101
+    // castling prevented: pass
     tests[10] = "r3k2r/8/3Q4/8/8/5q2/8/R3K2R b KQkq - 0 1"; // 4 = 1720476
     tests[11] = "r3k2r/8/5Q2/8/8/3q4/8/R3K2R w KQkq - 0 1"; // 4 = 1720476
     // promote out of check: pass
@@ -800,7 +824,7 @@ void run_tests()
 
     for (int i = 0; i < 26; i++)
     {
-        printf("Test %d, depth %d, %s\n", i, test_depths[i], tests[i]);
+        printf("Test %d, depth %d, %s\n", i, test_depths[i/2], tests[i]);
         initialise_board(tests[i]);
         if (i == 0 || i == 3)
         {
@@ -810,27 +834,27 @@ void run_tests()
         {
             state.ep_x = 4;
         }
-        memset(nodes, 0, 16);
-        memset(captures, 0, 16);
-        memset(eps, 0, 16);
-        memset(castles, 0, 16);
-        perft(test_depths[i], KINGSIDE_WHITE);
-        printf("%d  %d  %d  %d\n", nodes[0], captures[0], eps[0], castles[0]);
+        long node_count = perft(test_depths[i/2], test_depths[i/2]);
+        if (node_count == correct_result[i/2])
+        {
+            printf("Passed: %d\n", node_count);
+        }
+        else
+        {
+            printf("FAILED: %d instead of %d\n", node_count, correct_result[i/2]);
+        }
     }
+    exit(EXIT_SUCCESS);
 }
 
 int main()
 {
-    initialise_board("r3k2r/p6p/8/B7/1pp1p3/3b4/P6P/R3K2R w KQkq -");
-    print_board(board, state);
-    int test_depth = 5;
-    perft(test_depth, BLANK_MOVE);
-    for (int i = test_depth - 1; i >= 0; i--)
-    {
-        printf("%d  %d  %d  %d\n", nodes[i], captures[i], eps[i], castles[i]);
-    }
-    
-    return 0;
+    // initialise_board("r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10 ");
+    // print_board(board, state);
+    // int depth = 5;
+    // int node_count = perft(depth, depth);
+    // printf("%d\n", node_count);
+    // return 0;
 
     char *settings = get_settings();
     puts(settings);
@@ -868,6 +892,7 @@ int main()
     }
     free(settings);
 
+    initialise_board(STARTING_POSITION);
     while (true)
     {
         print_board(board, state);

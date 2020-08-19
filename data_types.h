@@ -12,12 +12,10 @@ enum player
 typedef struct
 {
     enum player turn;
-    bool queenside_r_stationary;
-    bool k_stationary;
-    bool kingside_r_stationary;
-    bool queenside_R_stationary;
-    bool K_stationary;
-    bool kingside_R_stationary;
+    bool can_castle_K;
+    bool can_castle_Q;
+    bool can_castle_k;
+    bool can_castle_q;
     char ep_x;
 } state_t;
 
