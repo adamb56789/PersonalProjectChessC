@@ -9,6 +9,11 @@
         "ostream": "c",
         "sstream": "c",
         "streambuf": "c",
-        "regex": "c"
+        "regex": "c",
+        "system_error": "c",
+        "array": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "utility": "c"
     }
 }

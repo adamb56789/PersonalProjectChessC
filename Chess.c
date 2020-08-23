@@ -42,6 +42,7 @@ char board[8][8] = {};
 // ep_x (en passant target) is stored from the opposing side's perspective after making a move
 state_t state ={ white, false, false, false, false, -1 };
 
+int max_depth;
 
 const int MAX_LIST_LENGTH = 255;
 int moves_len;
@@ -690,26 +691,75 @@ bool is_move_equal(move_t a, move_t b)
         && a.promotion_piece == b.promotion_piece;
 }
 
-move_t alpha_beta(int depth, int beta, int alpha, move_t move)
+move_value_t alpha_beta(int depth, int beta, int alpha, move_t move)
 {
+    move_value_t return_move ={move, 0};
     if (depth == 0)
     {
-        return move;
+        move_value_t temp_move ={move, rate(board, 0, 0)};
+        return temp_move;
     }
 
     move_t *moves = malloc(MAX_LIST_LENGTH * sizeof(move_t));
     int number_of_moves = generate_moves(moves);
+
+    if (number_of_moves == 0)
+    {
+        move_value_t temp_move ={move, rate(board, number_of_moves, depth)};
+        return temp_move;
+    }
 
     for (int i = 0; i < number_of_moves; i++)
     {
         state_t old_state = state;
         make_move(moves[i]);
         rotate_board();
-        move_t return_move = alpha_beta(depth - 1, beta, alpha, moves[i]);
+        move_value_t next_move = alpha_beta(depth - 1, beta, alpha, moves[i]);
+        int eval = next_move.value;
         rotate_board();
         undo_move(moves[i], old_state);
+
+        if (state.turn == white)
+        {
+            if (eval <= beta)
+            {
+                beta = eval;
+                if (depth == max_depth)
+                {
+                    return_move = next_move;
+                }
+            }
+        }
+        else
+        {
+            if (eval > alpha)
+            {
+                alpha = eval;
+                if (depth == max_depth) {
+                    return_move = next_move;
+                }
+            }
+        }
+        if (alpha >= beta)
+        {
+            if (state.turn == white)
+            {
+                return_move.value = beta;
+            } else
+            {
+                return_move.value = alpha;
+            }
+            return return_move;
+        }
     }
-    return move;
+    if (state.turn == white)
+    {
+        return_move.value = beta;
+    } else
+    {
+        return_move.value = alpha;
+    }
+    return return_move;
 }
 
 long perft(int depth, int max_depth)
@@ -849,13 +899,6 @@ void run_tests()
 
 int main()
 {
-    // initialise_board("r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10 ");
-    // print_board(board, state);
-    // int depth = 5;
-    // int node_count = perft(depth, depth);
-    // printf("%d\n", node_count);
-    // return 0;
-
     char *settings = get_settings();
     puts(settings);
 
@@ -876,7 +919,6 @@ int main()
     // fclose(fopen(filename, "w"));
 
     // Difficulty setting
-    int max_depth;
     if (strcmp(settings, NORMAL) == 0)
     {
         max_depth = 4;
@@ -925,5 +967,9 @@ int main()
                 return 0;
             }
         }
+        move_t computer_move = alpha_beta(max_depth, 1000000, -1000000, BLANK_MOVE).move;
+        log_move(computer_move);
+        make_move(computer_move);
+        rotate_board();
     }
 }
